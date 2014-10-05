@@ -8,7 +8,6 @@ package mb.hdfs.filehandling;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import mb.hdfs.datagen.DataGen;
 import org.apache.hadoop.conf.Configuration;

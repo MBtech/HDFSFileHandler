@@ -12,6 +12,10 @@ package mb.hdfs.datagen;
 import org.apache.commons.lang3.RandomUtils;
 import java.util.Random;
 public class DataGen {
+    /**
+     * Generate and return a byte array filled with random data
+     * @return 
+     */
     public byte[] randDataGen(){
         byte[] randbuf = RandomUtils.nextBytes(new Random().nextInt(10000));
         return randbuf;

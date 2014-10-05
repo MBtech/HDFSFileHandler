@@ -16,6 +16,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import mb.hdfs.aux.PathConstruction;
 
 /**
  *
@@ -23,47 +24,50 @@ import org.apache.hadoop.fs.Path;
  */
 public class BlockOps implements Operations{
     /**
-     * 
+     * It's BlockOps not BlackOps 
+     * BlockOps provides block read, write and hashing for HDFS files
      * @param folderName Name of the folder for the file to be written
      * @param fileName Name of the file to be written
      * @param blockSize Block size (in bytes)
      * @throws NoSuchAlgorithmException
      * @throws IOException 
      */
+    final boolean LOG = true;
+    /**
+     * Log the files
+     * @param logMessage 
+     */
+    private void log(Object logMessage){
+        if (LOG == true){
+            System.out.println(logMessage);
+        }
+    }
+    
+    @Override
     public void hdfsWriteData(String folderName, String fileName, int blockSize) throws NoSuchAlgorithmException, IOException {
         FileSystem hdfs = FileSystem.get(new Configuration());
-        Path HomePath = hdfs.getHomeDirectory();
-        Path newFolderPath = new Path("/" + folderName);
-        newFolderPath = Path.mergePaths(HomePath, newFolderPath);
-        
-        //Delete the folder and the file if it already exists
-        if (hdfs.exists(newFolderPath)){
-           hdfs.delete(newFolderPath,true);
-        }
-        //Creating a file in HDFS
-        Path newFilePath = new Path(newFolderPath + "/" + fileName);
-        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash");
-        hdfs.createNewFile(newFilePath);
-        hdfs.createNewFile(newHashFilePath);
+        Path [] P = new Path[2];
+        P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName);
+        Path newFilePath = P[0], newHashFilePath = P[1];
         //Writing data to a HDFS file
         FSDataOutputStream fsOutStream = hdfs.create(newFilePath, true, blockSize, (short) 3, blockSize);
         DataGen dg = new DataGen();
-        byte [] randbyt =null, tmp =null;
+        byte [] randbyt,tmp;
        
         tmp = dg.randDataGen();
-        System.out.println(tmp);
+        log(tmp);
         byte [] byt = new byte[tmp.length];
         System.arraycopy(tmp, 0, byt, 0, tmp.length);
         while(byt.length<blockSize){
             randbyt = dg.randDataGen();
-            System.out.println(byt.length);
-            System.out.println(randbyt.length);
+            log(byt.length);
+            log(randbyt.length);
             byt = new byte[byt.length+randbyt.length];
-            System.out.println(byt.length);
+            log(byt.length);
             System.arraycopy(randbyt, 0, byt, byt.length-randbyt.length, randbyt.length);
             //System.out.print(byt);
         }
-        int diff = 0;
+        int diff;
         byte [] nxtbyt = new byte[byt.length-blockSize];
         if((diff = byt.length-blockSize)>0){
             System.arraycopy(byt, blockSize, nxtbyt, 0, diff);
@@ -73,7 +77,9 @@ public class BlockOps implements Operations{
         //Hashing
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(byt);
-        System.out.println(md.digest());
+        
+        log(md.digest());
+        
         //Copying the remainder of bytes back to main array
         byt = nxtbyt;
         
@@ -89,18 +95,16 @@ public class BlockOps implements Operations{
     @Override
     public void hdfsReadData(String folderName, String fileName) throws IOException {
         FileSystem hdfs = FileSystem.get(new Configuration());
-        Path homePath = hdfs.getHomeDirectory();
-        Path newFolderPath = new Path("/" + folderName);
-        newFolderPath = Path.mergePaths(homePath, newFolderPath);
-        Path newFilePath = new Path(newFolderPath + "/" + fileName);
-
+        
+        Path newFilePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
+        
         //Reading data From HDFS File
         System.out.println("Reading from HDFS file.");
 
         BufferedReader bfr = new BufferedReader(
                 new InputStreamReader(hdfs.open(newFilePath)));
 
-        String str = null;
+        String str;
 
         while ((str = bfr.readLine()) != null) {
 

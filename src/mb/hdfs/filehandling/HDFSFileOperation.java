@@ -9,8 +9,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
-import mb.hdfs.datagen.DataGen;
-import mb.hdfs.filehandling.StreamingOps;
 /**
  *
  * @author mb
