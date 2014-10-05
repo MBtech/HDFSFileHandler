@@ -13,7 +13,7 @@ import org.apache.commons.lang3.RandomUtils;
 import java.util.Random;
 public class DataGen {
     public byte[] randDataGen(){
-        byte[] randbuf = RandomUtils.nextBytes(new Random().nextInt(100));
+        byte[] randbuf = RandomUtils.nextBytes(new Random().nextInt(10000));
         return randbuf;
     }
 }

@@ -8,63 +8,21 @@ package mb.hdfs.filehandling;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import java.io.*;
+import java.security.NoSuchAlgorithmException;
 import mb.hdfs.datagen.DataGen;
-
+import mb.hdfs.filehandling.StreamingOps;
 /**
  *
  * @author mb
  */
 public class HDFSFileOperation {
-
-    public void hdfsWriteData(String folderName, String fileName) throws IOException {
-        FileSystem hdfs = FileSystem.get(new Configuration());
-        Path HomePath = hdfs.getHomeDirectory();
-        Path newFolderPath = new Path("/" + folderName);
-        newFolderPath = Path.mergePaths(HomePath, newFolderPath);
-
-            //Creating a file in HDFS
-        Path newFilePath = new Path(newFolderPath + "/" + fileName);
-
-        hdfs.createNewFile(newFilePath);
-        //Writing data to a HDFS file
-        FSDataOutputStream fsOutStream = hdfs.create(newFilePath, true, 10000, (short) 3, 16777216);
-        DataGen dg = new DataGen();
-        for (int i = 0; i < 10; i++) {
-
-            byte[] byt = dg.randDataGen();
-            fsOutStream.write(byt);
-        }
-        fsOutStream.close();
-
-        System.out.println("Written data to HDFS file.");
+    public static int mbToBytes(int mbBlockSize){
+        return mbBlockSize*1024*1024;
     }
-
-    public void hdfsReadData(String folderName, String fileName) throws IOException {
-        FileSystem hdfs = FileSystem.get(new Configuration());
-        Path homePath = hdfs.getHomeDirectory();
-        Path newFolderPath = new Path("/" + folderName);
-        newFolderPath = Path.mergePaths(homePath, newFolderPath);
-        Path newFilePath = new Path(newFolderPath + "/" + fileName);
-
-            //Reading data From HDFS File
-        System.out.println("Reading from HDFS file.");
-
-        BufferedReader bfr = new BufferedReader(
-                new InputStreamReader(hdfs.open(newFilePath)));
-
-        String str = null;
-
-        while ((str = bfr.readLine()) != null) {
-
-            System.out.println(str);
-
-        }
-    }
-
     /**
      * @param args the command line arguments
      */
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws NoSuchAlgorithmException,IOException {
         FileSystem hdfs = FileSystem.get(new Configuration());
 
             //Print the home directory
@@ -79,7 +37,7 @@ public class HDFSFileOperation {
 
         if (hdfs.exists(newFolderPath)) {
 
-                  //Delete existing Directory
+            //Delete existing Directory
             hdfs.delete(newFolderPath, true);
 
             System.out.println("Existing Folder Deleted.");
@@ -106,9 +64,13 @@ public class HDFSFileOperation {
 
         System.out.println("Files copied from HDFS to local.");
         
-        HDFSFileOperation hfo = new HDFSFileOperation();
-        hfo.hdfsWriteData("MyTestFolder","MyTestFile");
-        hfo.hdfsReadData("MyTestFolder", "MyTestFile");
+       /**StreamingOps hsfo = new StreamingOps();
+        hsfo.hdfsWriteData("MyTestFolder","MyTestFile");
+        hsfo.hdfsReadData("MyTestFolder", "MyTestFile");
+        **/
+        BlockOps hbfo = new BlockOps();
+        hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(16));
+        hbfo.hdfsReadData("MyTestFolder", "MyTestFile");
 
     }
 
