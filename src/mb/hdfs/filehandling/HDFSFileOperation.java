@@ -5,6 +5,7 @@
  */
 package mb.hdfs.filehandling;
 
+import mb.hdfs.operations.BlockOps;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import java.io.*;

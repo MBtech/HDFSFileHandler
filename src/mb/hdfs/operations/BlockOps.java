@@ -3,15 +3,16 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mb.hdfs.filehandling;
+package mb.hdfs.operations;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import mb.hdfs.aux.Logger;
 import mb.hdfs.datagen.DataGen;
-import mb.hdfs.interfaces.Operations;
+import mb.hdfs.operations.Operations;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,16 +33,12 @@ public class BlockOps implements Operations{
      * @throws NoSuchAlgorithmException
      * @throws IOException 
      */
-    final boolean LOG = true;
+    final boolean LOG = false;
     /**
      * Log the files
      * @param logMessage 
      */
-    private void log(Object logMessage){
-        if (LOG == true){
-            System.out.println(logMessage);
-        }
-    }
+    
     
     @Override
     public void hdfsWriteData(String folderName, String fileName, int blockSize) throws NoSuchAlgorithmException, IOException {
@@ -52,18 +49,13 @@ public class BlockOps implements Operations{
         //Writing data to a HDFS file
         FSDataOutputStream fsOutStream = hdfs.create(newFilePath, true, blockSize, (short) 3, blockSize);
         DataGen dg = new DataGen();
-        byte [] randbyt,tmp;
-       
-        tmp = dg.randDataGen();
-        log(tmp);
-        byte [] byt = new byte[tmp.length];
-        System.arraycopy(tmp, 0, byt, 0, tmp.length);
+        byte [] randbyt = new byte[0], byt = new byte[0];
         while(byt.length<blockSize){
             randbyt = dg.randDataGen();
-            log(byt.length);
-            log(randbyt.length);
+            Logger.log(byt.length, LOG);
+            Logger.log(randbyt.length,LOG);
             byt = new byte[byt.length+randbyt.length];
-            log(byt.length);
+            Logger.log(byt.length,LOG);
             System.arraycopy(randbyt, 0, byt, byt.length-randbyt.length, randbyt.length);
             //System.out.print(byt);
         }
@@ -72,13 +64,14 @@ public class BlockOps implements Operations{
         if((diff = byt.length-blockSize)>0){
             System.arraycopy(byt, blockSize, nxtbyt, 0, diff);
         }
+        //TODO extra bytes are being written to the HDFS (more than a block size)
         //Write to the file stream
         fsOutStream.write(byt);
-        //Hashing
+        //Hashing 
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(byt);
         
-        log(md.digest());
+        //log(md.digest());
         
         //Copying the remainder of bytes back to main array
         byt = nxtbyt;
