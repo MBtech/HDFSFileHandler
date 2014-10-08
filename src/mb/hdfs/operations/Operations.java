@@ -18,5 +18,5 @@ public interface Operations {
     //TODO The blockSize should be long instead of int 
     public void hdfsWriteData(String folderName, String fileName, int blockSize) throws IOException, NoSuchAlgorithmException;
     
-    public void hdfsReadData(String folderName, String fileName) throws IOException;
+    public void hdfsReadData(String folderName, String fileName, int blockSize) throws IOException, NoSuchAlgorithmException;
 }

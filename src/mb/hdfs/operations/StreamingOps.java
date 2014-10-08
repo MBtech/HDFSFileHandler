@@ -74,13 +74,11 @@ public class StreamingOps implements Operations{
         System.out.println("Written data to HDFS file.");
     }
     @Override
-    public void hdfsReadData(String folderName, String fileName) throws IOException {
+    public void hdfsReadData(String folderName, String fileName,int blockSize) throws IOException, NoSuchAlgorithmException {
         FileSystem hdfs = FileSystem.get(new Configuration());
-        Path homePath = hdfs.getHomeDirectory();
-        Path newFolderPath = new Path("/" + folderName);
-        newFolderPath = Path.mergePaths(homePath, newFolderPath);
-        Path newFilePath = new Path(newFolderPath + "/" + fileName);
-
+        Path [] P = new Path[2];
+        P = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
+        Path newFilePath = P[0], newHashFilePath = P[1];
             //Reading data From HDFS File
         System.out.println("Reading from HDFS file.");
 
@@ -88,11 +86,25 @@ public class StreamingOps implements Operations{
                 new InputStreamReader(hdfs.open(newFilePath)));
 
         String str = null;
-
+        byte [] data = new byte[blockSize];
+        int cpos = 0;
         while ((str = bfr.readLine()) != null) {
-
-            System.out.println(str);
+            System.arraycopy(str.getBytes(), str.length(), data, cpos, str.length());
+            cpos = str.length();
+            //System.out.println(str);
 
         }
+        //byte [] cbuf = new byte[32];
+        
+        bfr = new BufferedReader(
+                new InputStreamReader(hdfs.open(newHashFilePath)));
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        str = bfr.readLine();
+        //System.arraycopy(str.getBytes(), str.length(), cbuf, 0, 32);
+        md.update(data);
+        if(str == md.digest().toString()){
+            System.out.println("Match Successful");
+        }
+        //bfr.read()
     }
 }

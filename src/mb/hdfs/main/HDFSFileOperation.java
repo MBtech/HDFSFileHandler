@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mb.hdfs.filehandling;
+package mb.hdfs.main;
 
 import mb.hdfs.operations.BlockOps;
 import org.apache.hadoop.conf.Configuration;
@@ -68,8 +68,8 @@ public class HDFSFileOperation {
         hsfo.hdfsReadData("MyTestFolder", "MyTestFile");
         **/
         BlockOps hbfo = new BlockOps();
-        hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(16));
-        hbfo.hdfsReadData("MyTestFolder", "MyTestFile");
+        hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
+        hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
 
     }
 

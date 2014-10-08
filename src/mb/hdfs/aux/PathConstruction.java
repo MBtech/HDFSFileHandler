@@ -47,11 +47,13 @@ public class PathConstruction {
      * @param fileName Name of the file to be read
      * @return 
      */
-    public static Path CreateReadPath(FileSystem hdfs, String folderName, String fileName){
+    public static Path[] CreateReadPath(FileSystem hdfs, String folderName, String fileName){
         Path homePath = hdfs.getHomeDirectory();
         Path newFolderPath = new Path("/" + folderName);
         newFolderPath = Path.mergePaths(homePath, newFolderPath);
         Path newFilePath = new Path(newFolderPath + "/" + fileName);
-        return newFilePath;
+        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash");
+        Path [] returnPath = new Path[]{newFilePath, newHashFilePath};
+        return returnPath;
     }
 }
