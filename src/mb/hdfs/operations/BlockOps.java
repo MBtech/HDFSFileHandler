@@ -55,7 +55,7 @@ public class BlockOps implements Operations{
         DataGen dg = new DataGen();
         byte [] randbyt = new byte[0], byt = new byte[0];
         byte [] tmp; 
-        while(byt.length<blockSize){
+        while(byt.length<3*blockSize){
             randbyt = dg.randDataGen();
             //Logger.log(byt.length, LOG);
             //Logger.log(randbyt.length,LOG);

@@ -10,6 +10,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
+import mb.hdfs.operations.PieceOps;
 /**
  *
  * @author mb
@@ -69,8 +71,10 @@ public class HDFSFileOperation {
         **/
         BlockOps hbfo = new BlockOps();
         hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
-        hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
-
+        //hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
+        
+        PieceOps hpfo = new PieceOps("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
+        System.out.write(hpfo.readPiece(1));
     }
 
 }
