@@ -32,14 +32,14 @@ public class StreamingOps implements Operations{
     public void hdfsWriteData(String folderName, String fileName, int blockSize) throws NoSuchAlgorithmException,IOException {
         FileSystem hdfs = FileSystem.get(new Configuration());
         Path [] P = new Path[2];
-        P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName);
+        P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
         Path newFilePath = P[0], newHashFilePath = P[1];
         //Writing data to a HDFS file
         FSDataOutputStream fsOutStream = hdfs.create(newFilePath, true, blockSize, (short) 3, blockSize);
         DataGen dg = new DataGen();
         byte [] randbyt = new byte[0],byt = new byte[0];
         while(byt.length<blockSize){
-            randbyt = dg.randDataGen();
+            randbyt = dg.randDataGen(50);
             Logger.log(byt.length,LOG);
             Logger.log(randbyt.length,LOG);
             byt = new byte[byt.length+randbyt.length];

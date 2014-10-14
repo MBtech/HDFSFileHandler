@@ -15,5 +15,5 @@ public interface PieceOperations {
     
     public byte[] readPiece(int piecePos) throws IOException;
     
-    public void writePiece(int piecePos, byte[] piece);
+    public void writePiece(int piecePos, byte[] piece) throws IOException;
 }

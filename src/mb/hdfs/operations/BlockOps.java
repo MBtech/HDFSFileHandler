@@ -6,17 +6,12 @@
 package mb.hdfs.operations;
 
 import java.io.BufferedReader;
-import java.io.DataOutputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Formatter;
 import mb.hdfs.aux.Logger;
 import mb.hdfs.datagen.DataGen;
-import mb.hdfs.operations.Operations;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,7 +43,7 @@ public class BlockOps implements Operations{
     public void hdfsWriteData(String folderName, String fileName, int blockSize) throws NoSuchAlgorithmException, IOException {
         FileSystem hdfs = FileSystem.get(new Configuration());
         Path [] P = new Path[2];
-        P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName);
+        P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
         Path newFilePath = P[0], newHashFilePath = P[1];
         //Writing data to a HDFS file
         FSDataOutputStream fsOutStream = hdfs.create(newFilePath, true, blockSize, (short) 3, blockSize);
@@ -56,7 +51,7 @@ public class BlockOps implements Operations{
         byte [] randbyt = new byte[0], byt = new byte[0];
         byte [] tmp; 
         while(byt.length<3*blockSize){
-            randbyt = dg.randDataGen();
+            randbyt = dg.randDataGen(50);
             //Logger.log(byt.length, LOG);
             //Logger.log(randbyt.length,LOG);
             //Logger.log(randbyt, LOG);
@@ -130,6 +125,7 @@ public class BlockOps implements Operations{
         //Reading data From HDFS File
         System.out.println("Reading from HDFS file.");
 
+        //TODO Change the BufferedReader to FSDataInputStream
         BufferedReader bfr = new BufferedReader(
                 new InputStreamReader(hdfs.open(newFilePath)));
 

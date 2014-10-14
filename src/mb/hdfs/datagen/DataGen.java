@@ -17,9 +17,9 @@ public class DataGen {
      * Generate and return a byte array filled with random data
      * @return 
      */
-    public byte[] randDataGen(){
+    public byte[] randDataGen(int count){
         //byte[] randbuf = RandomUtils.nextBytes(new Random().nextInt(500000));
-        String s = RandomStringUtils.randomAlphanumeric(50);
+        String s = RandomStringUtils.randomAlphanumeric(count);
         //byte [] randbuf = RandomUtils.nextBytes(500000);
         //System.out.println("uuid = " + uuid);
         return s.getBytes();

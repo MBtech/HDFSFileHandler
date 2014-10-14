@@ -20,23 +20,25 @@ public class PathConstruction {
      * @param hdfs
      * @param folderName
      * @param fileName
+     * @param overwrite set to true if you want to delete the already existing file
      * @return
      * @throws IOException 
      */
-    public static Path[] CreatePathAndFile(FileSystem hdfs, String folderName, String fileName) throws IOException{
+    public static Path[] CreatePathAndFile(FileSystem hdfs, String folderName, String fileName, boolean overwrite) throws IOException{
         Path HomePath = hdfs.getHomeDirectory();
         Path newFolderPath = new Path("/" + folderName);
         newFolderPath = Path.mergePaths(HomePath, newFolderPath);
-        
-        //Delete the folder and the file if it already exists
-        if (hdfs.exists(newFolderPath)){
-           hdfs.delete(newFolderPath,true);
-        }
-        //Creating a file in HDFS
         Path newFilePath = new Path(newFolderPath + "/" + fileName);
         Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash");
-        hdfs.createNewFile(newFilePath);
-        hdfs.createNewFile(newHashFilePath);
+        
+        //Delete the folder and the file if it already exists
+        if (hdfs.exists(newFolderPath) && overwrite){
+           hdfs.delete(newFolderPath,true);
+           hdfs.createNewFile(newFilePath);
+           hdfs.createNewFile(newHashFilePath);
+        }
+        //Creating a file in HDFS
+        
         Path [] returnPath = new Path[]{newFilePath, newHashFilePath};
         return returnPath;
     }

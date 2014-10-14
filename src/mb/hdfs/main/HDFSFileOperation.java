@@ -11,6 +11,7 @@ import org.apache.hadoop.fs.*;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import mb.hdfs.datagen.DataGen;
 import mb.hdfs.operations.PieceOps;
 /**
  *
@@ -19,6 +20,10 @@ import mb.hdfs.operations.PieceOps;
 public class HDFSFileOperation {
     public static int mbToBytes(int mbBlockSize){
         return mbBlockSize*1024*1024;
+    }
+    
+    public static int kbToBytes(int kbBlockSize){
+        return kbBlockSize*1024;
     }
     /**
      * @param args the command line arguments
@@ -69,12 +74,20 @@ public class HDFSFileOperation {
         hsfo.hdfsWriteData("MyTestFolder","MyTestFile");
         hsfo.hdfsReadData("MyTestFolder", "MyTestFile");
         **/
-        BlockOps hbfo = new BlockOps();
-        hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
+        //BlockOps hbfo = new BlockOps();
+        //hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
         //hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
         
-        PieceOps hpfo = new PieceOps("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
-        System.out.write(hpfo.readPiece(1));
+        PieceOps hpfo = new PieceOps("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
+        for(int i = 0; i<12; i++){
+            hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
+        }
+        System.out.println("Closing the file");
+        hpfo.close();
+        //System.out.write(hpfo.readPiece(2));
+        //System.out.println("");
+       
+        
     }
 
 }
