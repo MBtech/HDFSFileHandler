@@ -13,6 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import mb.hdfs.datagen.DataGen;
 import mb.hdfs.operations.PieceOps;
+import mb.hdfs.operations.StreamingOps;
 /**
  *
  * @author mb
@@ -70,21 +71,29 @@ public class HDFSFileOperation {
 
         System.out.println("Files copied from HDFS to local.");
         
-       /**StreamingOps hsfo = new StreamingOps();
-        hsfo.hdfsWriteData("MyTestFolder","MyTestFile");
-        hsfo.hdfsReadData("MyTestFolder", "MyTestFile");
+        /**
+        StreamingOps hsfo = new StreamingOps();
+        hsfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
+        hsfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
         **/
-        //BlockOps hbfo = new BlockOps();
-        //hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
-        //hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
+        
+        /**
+        BlockOps hbfo = new BlockOps();
+        hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
+        hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
+        **/
+        
         
         PieceOps hpfo = new PieceOps("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
         for(int i = 0; i<12; i++){
             hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
         }
-        System.out.println("Closing the file");
         hpfo.close();
-        //System.out.write(hpfo.readPiece(2));
+        hpfo.readPiece(2);
+        System.out.println("Reading done");
+        System.out.println("Closing the file");
+        //hpfo.close();
+        
         //System.out.println("");
        
         

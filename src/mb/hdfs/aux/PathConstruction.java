@@ -29,7 +29,7 @@ public class PathConstruction {
         Path newFolderPath = new Path("/" + folderName);
         newFolderPath = Path.mergePaths(HomePath, newFolderPath);
         Path newFilePath = new Path(newFolderPath + "/" + fileName);
-        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash");
+        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash1");
         
         //Delete the folder and the file if it already exists
         if (hdfs.exists(newFolderPath) && overwrite){
@@ -54,7 +54,7 @@ public class PathConstruction {
         Path newFolderPath = new Path("/" + folderName);
         newFolderPath = Path.mergePaths(homePath, newFolderPath);
         Path newFilePath = new Path(newFolderPath + "/" + fileName);
-        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash");
+        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash1");
         Path [] returnPath = new Path[]{newFilePath, newHashFilePath};
         return returnPath;
     }

@@ -151,6 +151,7 @@ public class BlockOps implements Operations{
        
         StringBuilder s = new StringBuilder();
         s.append(bfr.readLine());
+        
                 
         //System.out.println(cpos);
         md.update(data,0,cpos);

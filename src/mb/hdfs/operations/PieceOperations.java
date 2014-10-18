@@ -6,6 +6,7 @@
 package mb.hdfs.operations;
 
 import java.io.IOException;
+import java.security.NoSuchAlgorithmException;
 
 /**
  *
@@ -13,7 +14,7 @@ import java.io.IOException;
  */
 public interface PieceOperations {
     
-    public byte[] readPiece(int piecePos) throws IOException;
+    public byte[] readPiece(int piecePos) throws IOException, NoSuchAlgorithmException;
     
-    public void writePiece(int piecePos, byte[] piece) throws IOException;
+    public void writePiece(int piecePos, byte[] piece) throws IOException, NoSuchAlgorithmException;
 }
