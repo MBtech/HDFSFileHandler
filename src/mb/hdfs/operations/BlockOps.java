@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Arrays;
 import mb.hdfs.aux.Logger;
 import mb.hdfs.datagen.DataGen;
 import org.apache.hadoop.conf.Configuration;
@@ -17,15 +18,20 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import mb.hdfs.aux.PathConstruction;
+import org.apache.hadoop.fs.FSDataInputStream;
 
 /**
- *
+ * BlockOps class provides full block read and write operations.
+ * With a fully functional PieceOps there is no particular need for BlockOps
+ * So it has been deprecated 
  * @author mb
  */
+@Deprecated
 public class BlockOps implements Operations{
     /**
      * It's BlockOps not BlackOps 
-     * BlockOps provides block read, write and hashing for HDFS files
+     * BlockOps provides block read, write and hashing for HDFS files.
+     * BlockOps has been deprecated
      * @param folderName Name of the folder for the file to be written
      * @param fileName Name of the file to be written
      * @param blockSize Block size (in bytes)
@@ -44,14 +50,14 @@ public class BlockOps implements Operations{
         FileSystem hdfs = FileSystem.get(new Configuration());
         Path [] P = new Path[2];
         P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
-        Path newFilePath = P[0], newHashFilePath = P[1];
+        Path filePath = P[0], hashFilePath = P[1];
         //Writing data to a HDFS file
-        FSDataOutputStream fsOutStream = hdfs.create(newFilePath, true, blockSize, (short) 3, blockSize);
+        FSDataOutputStream fsOutStream = hdfs.create(filePath, true, blockSize, (short) 3, blockSize);
         DataGen dg = new DataGen();
         byte [] randbyt = new byte[0], byt = new byte[0];
         byte [] tmp; 
-        while(byt.length<3*blockSize){
-            randbyt = dg.randDataGen(50);
+        while(byt.length<blockSize){
+            randbyt = dg.randDataGen(50000);
             //Logger.log(byt.length, LOG);
             //Logger.log(randbyt.length,LOG);
             //Logger.log(randbyt, LOG);
@@ -80,7 +86,7 @@ public class BlockOps implements Operations{
         //Copying the remainder of bytes back to main array
         //byt = nxtbyt;
         
-        FSDataOutputStream fsHOutputStream = hdfs.create(newHashFilePath);
+        FSDataOutputStream fsHOutputStream = hdfs.create(hashFilePath);
         
         //System.out.write(md.digest());
         byte [] mdbytes = md.digest();
@@ -121,38 +127,47 @@ public class BlockOps implements Operations{
         FileSystem hdfs = FileSystem.get(new Configuration());
         Path [] P = new Path[2];
         P = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
-        Path newFilePath = P[0], newHashFilePath = P[1];
+        Path filePath = P[0], hashFilePath = P[1];
         //Reading data From HDFS File
         System.out.println("Reading from HDFS file.");
 
         //TODO Change the BufferedReader to FSDataInputStream
         BufferedReader bfr = new BufferedReader(
-                new InputStreamReader(hdfs.open(newFilePath)));
+                new InputStreamReader(hdfs.open(filePath)));
 
         String str;
         byte [] data = new byte[2*blockSize];
         int cpos = 0;
         while ((str = bfr.readLine()) != null) {
             //byte [] tmp = str.getBytes(); 
+            System.out.println(str.length());
+            //System.out.write(str.getBytes());
             System.arraycopy(str.getBytes(), 0, data, cpos, str.length());
             cpos = cpos +str.length();
-            //System.out.println(str);
+            //System.out.println(cpos);
         }
         Logger.log("Length of the file read using readLine is "+ cpos, LOG);
        
         bfr.close();
        
-        bfr = new BufferedReader(
-                new InputStreamReader(hdfs.open(newHashFilePath)));
+        FSDataInputStream fhis = hdfs.open(hashFilePath);
         MessageDigest md = MessageDigest.getInstance("SHA-256");
+        
+        byte [] hashBytes = new byte[64];
+        int iread=0;       
+        while(iread<64){
+            
+            iread += fhis.read(hashBytes,iread,64-iread);
+            System.out.println("Number of bytes read are "+ iread);
+        }
         
         //TODO: Make it more generalized 
         //Right now the code only handles one hash in the file
        
-        StringBuilder s = new StringBuilder();
-        s.append(bfr.readLine());
+        //S0tringBuilder s = new StringBuilder();
+        //s.append(bfr.readLine());
         
-                
+        System.out.write(hashBytes);        
         //System.out.println(cpos);
         md.update(data,0,cpos);
            
@@ -166,7 +181,7 @@ public class BlockOps implements Operations{
         
         System.out.println("Hex format : " + sb.toString());
                
-        if(sb.toString().equals(s.toString())){
+        if(Arrays.equals(hashBytes,sb.toString().getBytes())){
             System.out.println("Match Successful");
         }
        

@@ -5,10 +5,7 @@
  */
 package mb.hdfs.operations;
 
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -32,7 +29,7 @@ public class PieceOps implements PieceOperations{
     private final int ppb;
     private int count;
     private byte [] writeArray;
-    private final FSDataOutputStream fdos, fhos;
+    private FSDataOutputStream fdos, fhos;
     
     private final FileSystem hdfs;
     public PieceOps(String folderName, String fileName, int blockSize, int pieceSize) 
@@ -71,8 +68,14 @@ public class PieceOps implements PieceOperations{
     public void close() throws IOException{
         this.fdos.close();
         this.fhos.close();
-        hdfs.close();
+        //hdfs.close();
         
+    }
+    
+    public void open() throws IOException{
+        Path[] P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
+        fdos= hdfs.append(P[0]);
+        fhos = hdfs.append(P[1]);
     }
     
     private byte [] hash(byte [] dataArray) throws NoSuchAlgorithmException{
@@ -120,10 +123,7 @@ public class PieceOps implements PieceOperations{
             //System.out.println(iread);
         }
         System.out.println("Number of Read Bytes are: " + iread);
-        //System.out.write(readBlock);
-        //System.out.println(readBlock);
-        //fdis.reset();
-        //Pieces in the block to be discarded 
+        
         System.out.println("Piece Size is " + pieceSize + " and start index is "+ ppInBlock*pieceSize);
         System.arraycopy(readBlock, ppInBlock*pieceSize, readByte, 0, pieceSize);
         
@@ -179,7 +179,7 @@ public class PieceOps implements PieceOperations{
         System.arraycopy(piece, 0, writeArray, count, pieceSize);
         count += pieceSize;
         System.out.println("The current index after increment " + count );
-        byte [] hash = new byte[32];
+        byte [] hash;
         if(count>=this.blockSize){
             System.out.println("Cleaning the array");
             fdos.write(writeArray); 
@@ -194,8 +194,7 @@ public class PieceOps implements PieceOperations{
             fhos.writeBytes(sb.toString());
             
             fhos.flush();
-            //System.out.write(hash);
-            //System.out.println("");
+           
             count = 0;
             writeArray = new byte[blockSize];
             //fdos.close(); //Should the file be closed here or should there be a separate function to close it
