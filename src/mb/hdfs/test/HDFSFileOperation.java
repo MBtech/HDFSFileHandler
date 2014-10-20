@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mb.hdfs.main;
+package mb.hdfs.test;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
@@ -11,8 +11,8 @@ import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import mb.hdfs.datagen.DataGen;
-import mb.hdfs.operations.PieceOps;
-import mb.hdfs.operations.StreamingOps;
+import mb.hdfs.core.operations.PieceOps;
+import mb.hdfs.core.operations.StreamingOps;
 /**
  *
  * @author mb

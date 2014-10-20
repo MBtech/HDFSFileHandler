@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mb.hdfs.operations;
+package mb.hdfs.core.operations;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,7 +13,7 @@ import java.security.NoSuchAlgorithmException;
 import mb.hdfs.aux.Logger;
 import mb.hdfs.aux.PathConstruction;
 import mb.hdfs.datagen.DataGen;
-import mb.hdfs.operations.Operations;
+import mb.hdfs.core.operations.Operations;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;

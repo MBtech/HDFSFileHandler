@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mb.hdfs.operations;
+package mb.hdfs.core.operations;
 
 import com.sun.media.sound.InvalidDataException;
 import java.io.IOException;
