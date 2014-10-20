@@ -5,6 +5,7 @@
  */
 package mb.hdfs.operations;
 
+import com.sun.media.sound.InvalidDataException;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -77,20 +78,13 @@ public class PieceOps implements PieceOperations{
         return md.digest();
     }
     
-    private void read(FSDataInputStream fis, byte[] readBlock, int nToRead) throws IOException{
-        int iread = 0;
-        while(iread<nToRead){
-            iread += fis.read(readBlock, iread, nToRead-iread);
-            //System.out.println(iread);
-        }
-    }
     /**
-     * 
-     * @param hdfs
-     * @param filePath
-     * @param piecePos
-     * @param blockSize
-     * @return
+     * Read the piece specified by the piece position
+     * @param hdfs File system handle
+     * @param filePath File Path
+     * @param piecePos The position of the piece
+     * @param blockSize Block size
+     * @return The bytes read
      * @throws IOException 
      */
     private byte [] readPiece
@@ -107,18 +101,12 @@ public class PieceOps implements PieceOperations{
         int blockPos = (int)Math.ceil(piecePos/ppb); // Review it
         System.out.println("No. of pieces Per block is "+ ppb);
         System.out.println("Block position of concern is "+ blockPos);
-        int discardBlocks = blockPos - 1; //Review it
+        int discardBlocks = blockPos; //Review it
         int ppInBlock = piecePos % ppb; //Review it 
         System.out.println("Piece position in block is "+ ppInBlock);
         System.out.println(fdis.available());
         
-        for(int i=0; i<=discardBlocks; i++){
-            read(fdis, readBlock, blockSize);
-            System.out.println("No. of blocks discarded "+ i+1);
-        }
-        
-        //Read the block of interest
-        read(fdis, readBlock, blockSize);
+        fdis.readFully(blockSize*discardBlocks, readBlock, 0, blockSize);
         
         System.out.println("Piece Size is " + pieceSize + " and start index is "+ ppInBlock*pieceSize);
         
@@ -130,13 +118,9 @@ public class PieceOps implements PieceOperations{
         readHashByte = md.digest();
         
         FSDataInputStream fhis = new FSDataInputStream(hdfs.open(hashFilePath));
-        for(int i=0; i<=discardBlocks;i++){
-            read(fhis, hashByte, 64);
-            System.out.println("No. of hash blocks discarded "+ i+1);
-        }
         
-        read(fhis, hashByte, 64);
-        
+        fhis.readFully(64*discardBlocks, hashByte, 0, 64);
+
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < readHashByte.length; i++) {
           sb.append(Integer.toString((readHashByte[i] & 0xff) + 0x100, 16).substring(1));
@@ -151,8 +135,9 @@ public class PieceOps implements PieceOperations{
             return readByte;
         }
         else{
-            return readByte;
-            //throw new InvalidDataException("The hash results do no match");
+            //return readByte;
+            //Change this exception
+            throw new InvalidDataException("The hash results do no match");
         }
     }
     
@@ -183,12 +168,8 @@ public class PieceOps implements PieceOperations{
            
             count = 0;
             writeArray = new byte[blockSize];
-            //fdos.close(); //Should the file be closed here or should there be a separate function to close it
         }
-        this.close();
-        //fdos.close();
-        //fhos.close();
-        
+        this.close();   
     }
     
     //TODO Change type of blockSize to long
