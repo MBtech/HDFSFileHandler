@@ -44,22 +44,15 @@ public class PieceOps implements PieceOperations{
         
         hdfs = FileSystem.get(new Configuration());
         Path[] P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
-        //Uncomment if you want to delete the created paths after test run
-        //hdfs.deleteOnExit(P[0]);
-        //hdfs.deleteOnExit(P[1]);
-        
-        fdos= hdfs.create(P[0],true,blockSize,(short)3,blockSize);
-        fhos = hdfs.create(P[1], true, blockSize, (short)3, blockSize);
-        
+               
+        fdos= hdfs.create(P[0],true,blockSize,(short)1,blockSize);
+        fhos = hdfs.create(P[1], true, blockSize, (short)1, blockSize);
+        this.close();
         if (blockSize%pieceSize != 0){
             
             throw new IllegalArgumentException
                     ("Illegal pieceSize: Size should be multiple of blockSize");
         }
-        
-        //fdos.close();
-        //fhos.close();
-        //hdfs.close();
     }
     /**
      * Close the instance of Piece Operation Class
@@ -73,7 +66,7 @@ public class PieceOps implements PieceOperations{
     }
     
     public void open() throws IOException{
-        Path[] P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
+        Path[] P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, false);
         fdos= hdfs.append(P[0]);
         fhos = hdfs.append(P[1]);
     }
@@ -84,6 +77,13 @@ public class PieceOps implements PieceOperations{
         return md.digest();
     }
     
+    private void read(FSDataInputStream fis, byte[] readBlock, int nToRead) throws IOException{
+        int iread = 0;
+        while(iread<nToRead){
+            iread += fis.read(readBlock, iread, nToRead-iread);
+            //System.out.println(iread);
+        }
+    }
     /**
      * 
      * @param hdfs
@@ -111,45 +111,33 @@ public class PieceOps implements PieceOperations{
         int ppInBlock = piecePos % ppb; //Review it 
         System.out.println("Piece position in block is "+ ppInBlock);
         System.out.println(fdis.available());
+        
         for(int i=0; i<=discardBlocks; i++){
-            fdis.read(readBlock, 0, blockSize);
+            read(fdis, readBlock, blockSize);
             System.out.println("No. of blocks discarded "+ i+1);
         }
         
-        //fdis.mark(blockSize); // mark the start of the block from where we want to read
-        int iread=0;
-        while(iread<blockSize){
-            iread += fdis.read(readBlock, iread, blockSize-iread);
-            //System.out.println(iread);
-        }
-        System.out.println("Number of Read Bytes are: " + iread);
+        //Read the block of interest
+        read(fdis, readBlock, blockSize);
         
         System.out.println("Piece Size is " + pieceSize + " and start index is "+ ppInBlock*pieceSize);
+        
+        //Get the piece of interest from the block of interest
         System.arraycopy(readBlock, ppInBlock*pieceSize, readByte, 0, pieceSize);
         
-        /**
-         *  for(int i=0; i<=discardBlocks;i++){
-            fhis.read(hashByte, 0, 64);
-            System.out.println("No. of hash blocks discarded "+ i+1);
-        }
-        **/
         MessageDigest md = MessageDigest.getInstance("SHA-256");
         md.update(readBlock);
         readHashByte = md.digest();
-            
+        
         FSDataInputStream fhis = new FSDataInputStream(hdfs.open(hashFilePath));
-        
-        //fhis.read
-        
-        iread=0;       
-        while(iread<64){
-            
-            iread += fhis.read(hashByte,iread,64-iread);
-            System.out.println("Number of bytes read are "+ iread);
+        for(int i=0; i<=discardBlocks;i++){
+            read(fhis, hashByte, 64);
+            System.out.println("No. of hash blocks discarded "+ i+1);
         }
-        //fhis.read(hashByte, 0, 64); //Have to calculate hash and compare it with block hash
-        //fhis.close();
-        StringBuffer sb = new StringBuffer();
+        
+        read(fhis, hashByte, 64);
+        
+        StringBuilder sb = new StringBuilder();
         for (int i = 0; i < readHashByte.length; i++) {
           sb.append(Integer.toString((readHashByte[i] & 0xff) + 0x100, 16).substring(1));
         }
@@ -171,9 +159,7 @@ public class PieceOps implements PieceOperations{
     private void writePiece
         (FileSystem hdfs, Path filePath, Path hashFilePath, int piecePos, int blockSize, byte[] piece) 
                 throws IOException, NoSuchAlgorithmException{
-        //FSDataOutputStream fdos, fhos;
-        //fdos = hdfs.append(filePath);
-        //fhos = hdfs.append(hashFilePath);
+        this.open();
         System.out.println("Size of writeArray " + writeArray.length);
         
         System.arraycopy(piece, 0, writeArray, count, pieceSize);
@@ -186,7 +172,7 @@ public class PieceOps implements PieceOperations{
             fdos.flush();
             hash = hash(writeArray);
             
-            StringBuffer sb = new StringBuffer();
+            StringBuilder sb = new StringBuilder();
             for (int i = 0; i < hash.length; i++) {
                 sb.append(Integer.toString((hash[i] & 0xff) + 0x100, 16).substring(1));
             }
@@ -199,6 +185,7 @@ public class PieceOps implements PieceOperations{
             writeArray = new byte[blockSize];
             //fdos.close(); //Should the file be closed here or should there be a separate function to close it
         }
+        this.close();
         //fdos.close();
         //fhos.close();
         

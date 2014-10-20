@@ -77,31 +77,31 @@ public class HDFSFileOperation {
         hsfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
         **/
         
-        
+        /**
         BlockOps hbfo = new BlockOps();
         hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
         hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
-        
+        **/
         
         //TODO Right now the write operations need to be close before read can be done.
-        /**
+        
         PieceOps hpfo = new PieceOps("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
         for(int i = 0; i<12; i++){
             hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
         }
-        hpfo.close();
+        //hpfo.close();
         hpfo.readPiece(2);
         System.out.println("Reading done");
         System.out.println("Closing the file");   
-        hpfo.open();
+        //hpfo.open();
         for(int i = 0; i<4; i++){
             hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
         }
-        hpfo.close();
-        hpfo.readPiece(3);
+        //hpfo.close();
+        hpfo.readPiece(4);
         System.out.println("Reading done");
         System.out.println("Closing the file");   
-        * */
+        
         
     }
 

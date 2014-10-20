@@ -39,10 +39,6 @@ public class BlockOps implements Operations{
      * @throws IOException 
      */
     final boolean LOG = true;
-    /**
-     * Log the files
-     * @param logMessage 
-     */
     
     
     @Override
@@ -163,9 +159,6 @@ public class BlockOps implements Operations{
         
         //TODO: Make it more generalized 
         //Right now the code only handles one hash in the file
-       
-        //S0tringBuilder s = new StringBuilder();
-        //s.append(bfr.readLine());
         
         System.out.write(hashBytes);        
         //System.out.println(cpos);
