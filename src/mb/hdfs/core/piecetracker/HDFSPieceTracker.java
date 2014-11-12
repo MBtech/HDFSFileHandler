@@ -7,13 +7,13 @@ package mb.hdfs.core.piecetracker;
 import java.util.BitSet;
 import java.util.Set;
 import java.util.TreeSet;
-import mb.hdfs.core.operations.PieceOperations;
+import mb.hdfs.core.storage.Storage;
 
 /**
  *
  * @author Muhammad Bilal <mubil@kth.se>
  */
-public class HDFSPieceTracker implements PieceOperations, PieceTracker{
+public class HDFSPieceTracker implements Storage, PieceTracker{
     private final BitSet pieces;
     private final int nrPieces;
     

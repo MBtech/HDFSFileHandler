@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mb.hdfs.core.operations;
+package mb.hdfs.core.storage;
 
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
@@ -12,7 +12,7 @@ import java.security.NoSuchAlgorithmException;
  *
  * @author mb
  */
-public interface PieceOperations {
+public interface Storage {
     
     public byte[] readPiece(int piecePos) throws IOException, NoSuchAlgorithmException;
     

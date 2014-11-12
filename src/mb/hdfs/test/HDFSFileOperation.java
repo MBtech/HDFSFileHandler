@@ -11,8 +11,10 @@ import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import mb.hdfs.datagen.DataGen;
-import mb.hdfs.core.operations.PieceOps;
-import mb.hdfs.core.operations.StreamingOps;
+import mb.hdfs.core.storage.HDFSRWFile;
+import mb.hdfs.core.storage.HDFSStorageFactory;
+import mb.hdfs.core.storage.Storage;
+import mb.hdfs.core.storage.StreamingOps;
 /**
  *
  * @author mb
@@ -76,15 +78,9 @@ public class HDFSFileOperation {
         hsfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
         **/
         
-        /**
-        BlockOps hbfo = new BlockOps();
-        hbfo.hdfsWriteData("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1));
-        hbfo.hdfsReadData("MyTestFolder", "MyTestFile",HDFSFileOperation.mbToBytes(1));
-        **/
-        
         //TODO Right now the write operations need to be close before read can be done.
-        
-        PieceOps hpfo = new PieceOps("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
+        Storage hpfo = HDFSStorageFactory.getExistingFile("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
+        //HDFSRWFile hpfo = new HDFSRWFile("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
         for(int i = 0; i<12; i++){
             hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
         }

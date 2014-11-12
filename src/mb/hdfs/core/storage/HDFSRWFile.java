@@ -3,7 +3,7 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package mb.hdfs.core.operations;
+package mb.hdfs.core.storage;
 
 import com.sun.media.sound.InvalidDataException;
 import java.io.IOException;
@@ -23,7 +23,7 @@ import org.apache.hadoop.fs.Path;
  * and then writes it to the HDFS.
  * @author mb
  */
-public class PieceOps implements PieceOperations{
+public class HDFSRWFile implements Storage{
     private final String fileName, folderName;
     private final int blockSize;
     private final int pieceSize;
@@ -33,7 +33,7 @@ public class PieceOps implements PieceOperations{
     private FSDataOutputStream fdos, fhos;
     
     private final FileSystem hdfs;
-    public PieceOps(String folderName, String fileName, int blockSize, int pieceSize) 
+    public HDFSRWFile(String folderName, String fileName, int blockSize, int pieceSize) 
     throws IOException{
         this.fileName = fileName;
         this.folderName = folderName;
