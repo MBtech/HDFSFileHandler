@@ -10,7 +10,7 @@ import java.security.NoSuchAlgorithmException;
 
 /**
  *
- * @author mb
+ * @author Muhammad Bilal <mubil@kth.se>
  */
 public interface Storage {
     

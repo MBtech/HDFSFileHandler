@@ -24,7 +24,7 @@ import org.apache.hadoop.fs.Path;
  * pieces until they are big enough (BlockSize of HDFS) and then writes it to
  * the HDFS.
  *
- * @author mb
+ * @author Muhammad Bilal <mubil@kth.se>
  */
 public class HDFSRWFile implements Storage {
 

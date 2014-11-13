@@ -6,16 +6,18 @@
 package mb.hdfs.datagen;
 
 /**
- *
- * @author mb
+ * Provides means of generating random data for testing 
+ * purposes
+ * @author Muhammad Bilal <mubil@kth.se>
  */
-import org.apache.commons.lang3.RandomUtils;
-import java.util.Random;
+//import org.apache.commons.lang3.RandomUtils;
+//import java.util.Random;
 import org.apache.commons.lang3.RandomStringUtils;
 public class DataGen {
     /**
-     * Generate and return a byte array filled with random data
-     * @return 
+     * Generate and return a byte array filled with random data@return 
+     * @param count number of bytes to be generated
+     * @return the random byte array
      */
     public byte[] randDataGen(int count){
         //byte[] randbuf = RandomUtils.nextBytes(new Random().nextInt(500000));

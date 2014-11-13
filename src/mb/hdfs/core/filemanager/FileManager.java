@@ -9,7 +9,7 @@ import java.util.Set;
 
 /**
  *
- * @author mb
+ * @author Muhammad Bilal <mubil@kth.se>
  */
 public interface FileManager {
     public boolean isComplete();

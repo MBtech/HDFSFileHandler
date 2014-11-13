@@ -11,6 +11,7 @@ import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
 import java.util.TreeSet;
+import mb.hdfs.aux.UnitConversion;
 import mb.hdfs.core.filemanager.HDFSFileManager;
 import mb.hdfs.core.piecetracker.HDFSPieceTracker;
 import mb.hdfs.core.piecetracker.PieceTracker;
@@ -18,17 +19,10 @@ import mb.hdfs.datagen.DataGen;;
 import mb.hdfs.core.storage.HDFSStorageFactory;
 import mb.hdfs.core.storage.Storage;
 /**
- *
- * @author mb
+ * 
+ * @author Muhammad Bilal <mubil@kth.se>
  */
-public class HDFSFileOperation {
-    public static int mbToBytes(int mbBlockSize){
-        return mbBlockSize*1024*1024;
-    }
-    
-    public static int kbToBytes(int kbBlockSize){
-        return kbBlockSize*1024;
-    }
+    public class HDFSFileOperation {
     /**
      * @param args the command line arguments
      */
@@ -61,12 +55,12 @@ public class HDFSFileOperation {
         
         //Testing Operations of HDFSStorage
         //NOTE: The write operations need to be close before read can be done.
-        Storage s = HDFSStorageFactory.getExistingFile("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
+        Storage s = HDFSStorageFactory.getExistingFile("MyTestFolder","MyTestFile",UnitConversion.mbToBytes(1),UnitConversion.kbToBytes(256));
         PieceTracker p = new HDFSPieceTracker(16);
         HDFSFileManager hpfo = new HDFSFileManager(s, p);
         
         for(int i = 0; i<12; i++){
-            hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
+            hpfo.writePiece(i, new DataGen().randDataGen(UnitConversion.kbToBytes(256)));
         }
         
         hpfo.readPiece(2);
@@ -79,12 +73,9 @@ public class HDFSFileOperation {
         n.add(15);
         n.add(13);
         for(Object i:n){
-            hpfo.writePiece((int)i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
+            hpfo.writePiece((int)i, new DataGen().randDataGen(UnitConversion.kbToBytes(256)));
 
-        }/**
-        for(int i = 12; i<16; i++){
-            hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
-        }**/
+        }
         
         hpfo.readPiece(14);
         System.out.println("Reading done");

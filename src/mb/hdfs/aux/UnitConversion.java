@@ -9,10 +9,12 @@ package mb.hdfs.aux;
  *
  * @author Muhammad Bilal <mubil@kth.se>
  */
-public class Logger {
-    public static void log(Object logMessage, boolean LOG){
-        if (LOG == true){
-            System.out.println(logMessage);
-        }
+public class UnitConversion {
+    public static int mbToBytes(int mbBlockSize){
+        return mbBlockSize*1024*1024;
+    }
+    
+    public static int kbToBytes(int kbBlockSize){
+        return kbBlockSize*1024;
     }
 }

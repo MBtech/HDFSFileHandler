@@ -5,12 +5,11 @@
  */
 package mb.hdfs.core.storage;
 
-import java.io.File;
 import java.io.IOException;
 
 /**
  *
- * @author mb
+ * @author Muhammad Bilal <mubil@kth.se>
  */
 public class HDFSStorageFactory {
     public static Storage getExistingFile(String folderName, String fileName, int blockSize, int pieceSize) throws IOException {

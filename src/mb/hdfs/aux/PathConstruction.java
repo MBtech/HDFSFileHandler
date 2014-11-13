@@ -11,7 +11,7 @@ import org.apache.hadoop.fs.Path;
 
 /**
  *
- * @author mb
+ * @author Muhammad Bilal <mubil@kth.se>
  */
 public class PathConstruction {
     /**

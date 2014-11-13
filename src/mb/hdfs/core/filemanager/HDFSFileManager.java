@@ -15,7 +15,7 @@ import mb.hdfs.core.piecetracker.PieceTracker;
 
 /**
  *
- * @author mb
+ * @author Muhammad Bilal <mubil@kth.se>
  */
 public class HDFSFileManager implements FileManager{
 
