@@ -105,47 +105,47 @@ public class HDFSRWFile implements Storage {
         // TODO: Should these be moved because hdfs open is being called with every read operation.
         FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
 
-        byte[] readByte = new byte[this.pieceSize];
+        byte[] readPiece = new byte[this.pieceSize];
         byte[] readBlock = new byte[blockSize];
         byte[] hashByte = new byte[64];
         byte[] readHashByte;
         //Blocks to be discarded
-        int blockPos = (int) Math.ceil(piecePos / piecesPerBlock); // Review it
+        int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
         System.out.println("No. of pieces Per block is " + piecesPerBlock);
         System.out.println("Block position of concern is " + blockPos);
-        int discardBlocks = blockPos; //Review it
-        int ppInBlock = piecePos % piecesPerBlock; //Review it 
+        int discardBlocks = blockPos; 
+        int ppInBlock = piecePos % piecesPerBlock; 
         System.out.println("Piece position in block is " + ppInBlock);
-        System.out.println(fdis.available());
+        //System.out.println(fdis.available());
 
         fdis.readFully(blockSize * discardBlocks, readBlock, 0, blockSize);
 
         System.out.println("Piece Size is " + pieceSize + " and start index is " + ppInBlock * pieceSize);
 
         //Get the piece of interest from the block of interest
-        System.arraycopy(readBlock, ppInBlock * pieceSize, readByte, 0, pieceSize);
+        System.arraycopy(readBlock, ppInBlock * pieceSize, readPiece, 0, pieceSize);
 
         MessageDigest md = MessageDigest.getInstance("SHA-256");
-        md.update(readBlock);
+        md.update(readPiece);
+        //md.update(readBlock); //use if hashing is on per block basis
         readHashByte = md.digest();
 
         FSDataInputStream fhis = new FSDataInputStream(hdfs.open(hashFilePath));
-
-        fhis.readFully(64 * discardBlocks, hashByte, 0, 64);
+        fhis.readFully(64*piecePos,hashByte,0,64); //Use in case hashing is for each piece
+        //fhis.readFully(64 * discardBlocks, hashByte, 0, 64); //if hashing is per block
 
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < readHashByte.length; i++) {
             sb.append(Integer.toString((readHashByte[i] & 0xff) + 0x100, 16).substring(1));
         }
-        System.out.println("Hex format of the hash of the data read: " + sb.toString());
-
-        //System.out.write(hashByte);
+        System.out.println("Hash of read data: " + sb.toString());
+        
         if (Arrays.equals(sb.toString().getBytes(), hashByte)) {
             System.out.println("Match Successful");
             System.out.println("Exiting read function");
-            return readByte;
+            this.close();
+            return readPiece;
         } else {
-            //return readByte;
             //Change this exception
             throw new InvalidDataException("The hash results do no match");
         }
@@ -159,8 +159,10 @@ public class HDFSRWFile implements Storage {
 
         piecesMap.put(piecePos, piece);
         havePieces.set(piecePos);
+        System.out.println(havePieces);
         int nPiecesWritten = currentBlockNumber * piecesPerBlock;
         int ncpieces = havePieces.nextClearBit(nPiecesWritten);
+        System.out.println("Number of pieces written "+nPiecesWritten);
         System.out.println("Number of contiguous pieces "+(ncpieces - nPiecesWritten));
         if (ncpieces - nPiecesWritten == piecesPerBlock) {
             System.out.println("Writing contiguous pieces to hdfs");

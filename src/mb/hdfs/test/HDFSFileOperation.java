@@ -9,6 +9,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
+import java.util.Set;
+import java.util.TreeSet;
 import mb.hdfs.core.filemanager.HDFSFileManager;
 import mb.hdfs.core.piecetracker.HDFSPieceTracker;
 import mb.hdfs.core.piecetracker.PieceTracker;
@@ -62,19 +64,29 @@ public class HDFSFileOperation {
         Storage s = HDFSStorageFactory.getExistingFile("MyTestFolder","MyTestFile",HDFSFileOperation.mbToBytes(1),HDFSFileOperation.kbToBytes(256));
         PieceTracker p = new HDFSPieceTracker(16);
         HDFSFileManager hpfo = new HDFSFileManager(s, p);
+        
         for(int i = 0; i<12; i++){
             hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
         }
         
         hpfo.readPiece(2);
         System.out.println("Reading done");
-        System.out.println("Closing the file");   
-        
-        for(int i = 0; i<4; i++){
+        System.out.println("Closing the file");  
+        //Sending out of order packets
+        Set n = new TreeSet(); 
+        n.add(12);
+        n.add(14);
+        n.add(15);
+        n.add(13);
+        for(Object i:n){
+            hpfo.writePiece((int)i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
+
+        }/**
+        for(int i = 12; i<16; i++){
             hpfo.writePiece(i, new DataGen().randDataGen(HDFSFileOperation.kbToBytes(256)));
-        }
+        }**/
         
-        hpfo.readPiece(4);
+        hpfo.readPiece(14);
         System.out.println("Reading done");
         System.out.println("Closing the file");   
         
