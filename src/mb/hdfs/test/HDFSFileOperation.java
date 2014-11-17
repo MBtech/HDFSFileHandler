@@ -9,6 +9,8 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.*;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
+import java.util.LinkedHashSet;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.TreeSet;
 import mb.hdfs.aux.UnitConversion;
@@ -67,7 +69,7 @@ import mb.hdfs.core.storage.Storage;
         System.out.println("Reading done");
         System.out.println("Closing the file");  
         //Sending out of order packets
-        Set n = new TreeSet(); 
+        Set n = new LinkedHashSet(); 
         n.add(12);
         n.add(14);
         n.add(15);

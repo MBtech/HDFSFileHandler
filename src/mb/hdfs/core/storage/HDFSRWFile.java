@@ -50,18 +50,14 @@ public class HDFSRWFile implements Storage {
         writeArray = new byte[blockSize];
         this.count = 0;
         this.piecesPerBlock = (int) blockSize / pieceSize;
-
         havePieces = new BitSet();
         currentBlockNumber = 0;
-
         hdfs = FileSystem.get(new Configuration());
         Path[] P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
-
         fdos = hdfs.create(P[0], true, blockSize, (short) 1, blockSize);
         fhos = hdfs.create(P[1], true, blockSize, (short) 1, blockSize);
         this.close();
         if (blockSize % pieceSize != 0) {
-
             throw new IllegalArgumentException("Illegal pieceSize: Size should be multiple of blockSize");
         }
     }
@@ -71,7 +67,7 @@ public class HDFSRWFile implements Storage {
      *
      * @throws IOException
      */
-    public void close() throws IOException {
+    public final void close() throws IOException {
         this.fdos.close();
         this.fhos.close();
         //hdfs.close();
@@ -104,7 +100,7 @@ public class HDFSRWFile implements Storage {
             throws IOException, NoSuchAlgorithmException {
         // TODO: Should these be moved because hdfs open is being called with every read operation.
         FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
-
+        
         byte[] readPiece = new byte[this.pieceSize];
         byte[] readBlock = new byte[blockSize];
         byte[] hashByte = new byte[64];
@@ -161,9 +157,10 @@ public class HDFSRWFile implements Storage {
         havePieces.set(piecePos);
         System.out.println(havePieces);
         int nPiecesWritten = currentBlockNumber * piecesPerBlock;
-        int ncpieces = havePieces.nextClearBit(nPiecesWritten);
+        int ncpieces = havePieces.nextClearBit(0);
         System.out.println("Number of pieces written "+nPiecesWritten);
-        System.out.println("Number of contiguous pieces "+(ncpieces - nPiecesWritten));
+        //System.out.println("Number of contiguous pieces "+(ncpieces - nPiecesWritten));
+        System.out.println("Number of contiguous pieces "+(ncpieces-nPiecesWritten));
         if (ncpieces - nPiecesWritten == piecesPerBlock) {
             System.out.println("Writing contiguous pieces to hdfs");
             for (int i = nPiecesWritten; i <ncpieces; i++) {
@@ -181,31 +178,14 @@ public class HDFSRWFile implements Storage {
 
                 fhos.flush();
             }
+            //Delete the pieces written to keep the size of pieceMap small
+            for (int i = nPiecesWritten; i <ncpieces; i++) {
+                piecesMap.remove(i);
+                
+            }
+            //System.out.println("Size of pieceMap is: "+ piecesMap.size());
             currentBlockNumber++;
         }
-        /**
-        System.arraycopy(piece, 0, writeArray, count, pieceSize);
-        count += pieceSize;
-        System.out.println("The current index after increment " + count);
-
-        if (count >= this.blockSize) {
-            System.out.println("Cleaning the array");
-            fdos.write(writeArray);
-            fdos.flush();
-            hash = hash(writeArray);
-
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < hash.length; i++) {
-                sb.append(Integer.toString((hash[i] & 0xff) + 0x100, 16).substring(1));
-            }
-            System.out.println("Hex format : " + sb.toString());
-            fhos.writeBytes(sb.toString());
-
-            fhos.flush();
-
-            count = 0;
-            writeArray = new byte[blockSize];
-        }**/
         this.close();
     }
 
