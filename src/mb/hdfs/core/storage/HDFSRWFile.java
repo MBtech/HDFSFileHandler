@@ -180,8 +180,7 @@ public class HDFSRWFile implements Storage {
             }
             //Delete the pieces written to keep the size of pieceMap small
             for (int i = nPiecesWritten; i <ncpieces; i++) {
-                piecesMap.remove(i);
-                
+                piecesMap.remove(i);   
             }
             //System.out.println("Size of pieceMap is: "+ piecesMap.size());
             currentBlockNumber++;
@@ -192,7 +191,7 @@ public class HDFSRWFile implements Storage {
     //TODO Change type of blockSize to long
     @Override
     public byte[] readPiece(int piecePos) throws IOException, NoSuchAlgorithmException {
-        FileSystem hdfs = FileSystem.get(new Configuration());
+        //FileSystem hdfs = FileSystem.get(new Configuration());
         Path[] P;
         P = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
         Path filePath = P[0], hashFilePath = P[1];
@@ -205,7 +204,7 @@ public class HDFSRWFile implements Storage {
     // TODO change the blockSize type to long instead of int 
     @Override
     public void writePiece(int piecePos, byte[] piece) throws IOException, NoSuchAlgorithmException {
-        FileSystem hdfs = FileSystem.get(new Configuration());
+        //FileSystem hdfs = FileSystem.get(new Configuration());
         Path[] P;
         P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, false);
         Path filePath = P[0], hashFilePath = P[1];

@@ -10,9 +10,7 @@ import org.apache.hadoop.fs.*;
 import java.io.*;
 import java.security.NoSuchAlgorithmException;
 import java.util.LinkedHashSet;
-import java.util.LinkedList;
 import java.util.Set;
-import java.util.TreeSet;
 import mb.hdfs.aux.UnitConversion;
 import mb.hdfs.core.filemanager.HDFSFileManager;
 import mb.hdfs.core.piecetracker.HDFSPieceTracker;
@@ -27,6 +25,8 @@ import mb.hdfs.core.storage.Storage;
     public class HDFSFileOperation {
     /**
      * @param args the command line arguments
+     * @throws java.security.NoSuchAlgorithmException
+     * @throws java.io.IOException
      */
     public static void main(String[] args) throws NoSuchAlgorithmException,IOException {
         FileSystem hdfs = FileSystem.get(new Configuration());
