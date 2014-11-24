@@ -86,7 +86,8 @@ public class HDFSRWFile implements Storage {
     public void close() throws IOException {
         byte[] hashPiece;
         byte[] hashCal;
-        for (int i = 0; i < pendingBlockHash.size(); i++) {
+        int npending = pendingBlockHash.size();
+        for (int i = 0; i < npending; i++) {
             System.out.println(objectType + "Number of pending blocks " + pendingBlockHash.size());
             System.out.println(objectType + "Read hash piece number " + (blocksWritten));
             hashPiece = hashFileManager.readPiece(blocksWritten);
@@ -102,6 +103,10 @@ public class HDFSRWFile implements Storage {
                     fdos.write(pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                     fdos.flush();
                 }
+                pendingBlockHash.remove(blocksWritten);
+                for (int j = 0; j < piecesPerBlock; j++) {
+                    pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
+                }
                 //Delete the pieces written to keep the size of pieceMap small      
                 blocksWritten++;
             } else {
@@ -109,15 +114,9 @@ public class HDFSRWFile implements Storage {
                 throw new InvalidDataException("The hash results do no match");
             }
         }
-        for (int i = 0; i < pendingBlockHash.size(); i++) {
-            pendingBlockHash.remove(blocksWritten);
-            for (int j = 0; j < piecesPerBlock; j++) {
-                pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
-            }
-        }
+
         //this.fhos.close();
         //hdfs.close();
-
     }
 
     public void open() throws IOException {
@@ -187,13 +186,15 @@ public class HDFSRWFile implements Storage {
 
             if (HASHING) {
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
-                md.update(readPiece);
+                md.update(readBlock);
                 //md.update(readBlock); //use if hashing is on per block basis
                 readHashByte = md.digest();
-                hashByte = hashFileManager.readPiece(piecePos);
+                hashByte = hashFileManager.readPiece(blockPos);
+                System.out.write(toByteString(readHashByte));
+                System.out.println();
+                System.out.write(hashByte); //Correct
                 if (Arrays.equals(toByteString(readHashByte), hashByte)) {
                     System.out.println("Match Successful");
-                    //this.close();
                     return readPiece;
                 } else {
                     //Change this exception
@@ -263,6 +264,11 @@ public class HDFSRWFile implements Storage {
                         fdos.write(pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                         fdos.flush();
                     }
+                    System.out.println("Removing pending hash blocks");
+                    pendingBlockHash.remove(blocksWritten);
+                    for (int j = 0; j < piecesPerBlock; j++) {
+                        pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
+                    }
                     //Delete the pieces written to keep the size of pieceMap small      
                     blocksWritten++;
                 } else {
@@ -270,13 +276,7 @@ public class HDFSRWFile implements Storage {
                     throw new InvalidDataException("The hash results do no match");
                 }
             }
-            for (int i = 0; i < writeablePending; i++) {
-                System.out.println("Removing pending hash blocks");
-                pendingBlockHash.remove(blocksWritten);
-                for (int j = 0; j < piecesPerBlock; j++) {
-                    pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
-                }
-            }
+
         } else {
             /**
              * for (int i = nPiecesWritten; i < ncpieces; i++) {
