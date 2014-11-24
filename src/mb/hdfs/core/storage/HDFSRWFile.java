@@ -13,6 +13,7 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.TreeMap;
 import mb.hdfs.aux.PathConstruction;
+import mb.hdfs.core.filemanager.HDFSFileManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -35,28 +36,42 @@ public class HDFSRWFile implements Storage {
     private int currentBlockNumber;
     private BitSet havePieces;
     private TreeMap<Integer, byte[]> piecesMap = new TreeMap<Integer, byte[]>();
-    private int count;
-    private byte[] writeArray;
-    private FSDataOutputStream fdos, fhos;
-
+    private boolean HASHING;
+    private FSDataOutputStream fdos;
+    private HDFSFileManager hashFileManager;
+    private int nPiecesWritten;
+    private int blocksWritten;
+    private int nPendingBlocks;
+    private TreeMap<Integer, byte[]> pendingBlocks = new TreeMap<Integer, byte[]>();
+    private TreeMap<Integer, byte[]> pendingBlockHash = new TreeMap<Integer, byte[]>();
+    private String objectType;
     private final FileSystem hdfs;
+    private Path P;
 
-    public HDFSRWFile(String folderName, String fileName, int blockSize, int pieceSize)
+    public HDFSRWFile(String folderName, String fileName, int blockSize, int pieceSize, HDFSFileManager hashFileMngr)
             throws IOException {
         this.fileName = fileName;
         this.folderName = folderName;
         this.blockSize = blockSize;
         this.pieceSize = pieceSize;
-        writeArray = new byte[blockSize];
-        this.count = 0;
         this.piecesPerBlock = (int) blockSize / pieceSize;
         havePieces = new BitSet();
         currentBlockNumber = 0;
+        nPiecesWritten = 0;
+        blocksWritten = 0;
+        nPendingBlocks = 0;
         hdfs = FileSystem.get(new Configuration());
-        Path[] P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
-        fdos = hdfs.create(P[0], true, blockSize, (short) 1, blockSize);
-        fhos = hdfs.create(P[1], true, blockSize, (short) 1, blockSize);
-        this.close();
+        P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
+        fdos = hdfs.create(P, true, blockSize, (short) 1, blockSize);
+        //this.close();
+        HASHING = false;
+        this.objectType = "Hash Manager: ";
+        if (hashFileMngr != null) {
+            this.objectType = "Data Manager: ";
+            this.HASHING = true;
+        }
+        hashFileManager = hashFileMngr;
+
         if (blockSize % pieceSize != 0) {
             throw new IllegalArgumentException("Illegal pieceSize: Size should be multiple of blockSize");
         }
@@ -67,23 +82,56 @@ public class HDFSRWFile implements Storage {
      *
      * @throws IOException
      */
-    public final void close() throws IOException {
-        this.fdos.close();
-        this.fhos.close();
+    @Override
+    public void close() throws IOException {
+        byte[] hashPiece;
+        byte[] hashCal;
+        for (int i = 0; i < pendingBlockHash.size(); i++) {
+            System.out.println(objectType + "Read hash piece number " + (blocksWritten));
+            hashPiece = hashFileManager.readPiece(blocksWritten);
+            hashCal = pendingBlockHash.get(i);
+            System.out.write(toByteString(hashCal));
+            System.out.println();
+            System.out.write(hashPiece);
+            if (Arrays.equals(toByteString(hashCal), hashPiece)) {
+                System.out.println(objectType + "Match Successful: Data received is correct");
+                System.out.println(objectType + "Writing contiguous pieces to hdfs");
+                for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
+                    System.out.println(objectType + "Writing piece number " + j);
+                    fdos.write(pendingBlocks.get(j));
+                    fdos.flush();
+                }
+                //Delete the pieces written to keep the size of pieceMap small      
+                blocksWritten++;
+            } else {
+                //Change this exception
+                throw new InvalidDataException("The hash results do no match");
+            }
+        }
+        for (int i = 0; i < pendingBlockHash.size(); i++) {
+            pendingBlockHash.remove(i);
+            for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
+                pendingBlocks.remove(j);
+            }
+        }
+        //this.fhos.close();
         //hdfs.close();
 
     }
 
     public void open() throws IOException {
-        Path[] P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, false);
-        fdos = hdfs.append(P[0]);
-        fhos = hdfs.append(P[1]);
+        //Path P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, false);
+        fdos = hdfs.append(P);
+
     }
 
-    private byte[] hash(byte[] dataArray) throws NoSuchAlgorithmException {
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
-        md.update(dataArray);
-        return md.digest();
+    private byte[] toByteString(byte[] hash) {
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < hash.length; i++) {
+            sb.append(Integer.toString((hash[i] & 0xff) + 0x100, 16).substring(1));
+        }
+        System.out.println("Hash of written data: " + sb.toString());
+        return sb.toString().getBytes();
     }
 
     /**
@@ -96,107 +144,161 @@ public class HDFSRWFile implements Storage {
      * @return The bytes read
      * @throws IOException
      */
-    private byte[] readPiece(FileSystem hdfs, Path filePath, Path hashFilePath, int piecePos, int blockSize)
+    private byte[] readPiece(FileSystem hdfs, Path filePath, int piecePos, int blockSize)
             throws IOException, NoSuchAlgorithmException {
-        // TODO: Should these be moved because hdfs open is being called with every read operation.
-        FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
-        
-        byte[] readPiece = new byte[this.pieceSize];
-        byte[] readBlock = new byte[blockSize];
-        byte[] hashByte = new byte[64];
-        byte[] readHashByte;
-        //Blocks to be discarded
-        int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
-        System.out.println("No. of pieces Per block is " + piecesPerBlock);
-        System.out.println("Block position of concern is " + blockPos);
-        int discardBlocks = blockPos; 
-        int ppInBlock = piecePos % piecesPerBlock; 
-        System.out.println("Piece position in block is " + ppInBlock);
-        //System.out.println(fdis.available());
+        //If the requested piece is the one that we  have already written
+        if (nPiecesWritten >= piecePos) {
+            // TODO: Should these be moved because hdfs open is being called with every read operation.
+            FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
 
-        fdis.readFully(blockSize * discardBlocks, readBlock, 0, blockSize);
+            byte[] readPiece = new byte[this.pieceSize];
+            byte[] readBlock = new byte[blockSize];
+            byte[] hashByte = new byte[64];
+            byte[] readHashByte;
+            //Blocks to be discarded
+            int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
+            System.out.println(objectType + "No. of pieces Per block is " + piecesPerBlock);
+            System.out.println(objectType + "Block position of concern is " + blockPos);
+            int discardBlocks = blockPos;
+            int ppInBlock = piecePos % piecesPerBlock;
+            System.out.println(objectType + "Piece position in block is " + ppInBlock);
+            //System.out.println(fdis.available());
 
-        System.out.println("Piece Size is " + pieceSize + " and start index is " + ppInBlock * pieceSize);
+            if (HASHING) {
+                System.out.println(objectType + "Reading from index " + blockSize * discardBlocks);
+                System.out.println(objectType + "Number of bytes to read " + blockSize);
+                fdis.readFully(blockSize * discardBlocks, readBlock, 0, blockSize);
 
-        //Get the piece of interest from the block of interest
-        System.arraycopy(readBlock, ppInBlock * pieceSize, readPiece, 0, pieceSize);
+                System.out.println(objectType + "Piece Size is " + pieceSize + " and start index is " + ppInBlock * pieceSize);
+                //Get the piece of interest from the block of interest
+                System.arraycopy(readBlock, ppInBlock * pieceSize, readPiece, 0, pieceSize);
+            } else {
+                if (piecesMap.containsKey(piecePos)) {
+                    System.out.println(objectType + "The piece is in the pending queue");
+                    readPiece = piecesMap.get(piecePos);
+                } else {
+                    System.out.println(objectType + "Reading from index " + pieceSize * piecePos);
+                    System.out.println(objectType + "Number of bytes to read " + pieceSize);
+                    System.out.println(fdis.available());
+                    fdis.readFully(pieceSize * piecePos, readPiece, 0, pieceSize);
+                }
+            }
 
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
-        md.update(readPiece);
-        //md.update(readBlock); //use if hashing is on per block basis
-        readHashByte = md.digest();
-
-        FSDataInputStream fhis = new FSDataInputStream(hdfs.open(hashFilePath));
-        fhis.readFully(64*piecePos,hashByte,0,64); //Use in case hashing is for each piece
-        //fhis.readFully(64 * discardBlocks, hashByte, 0, 64); //if hashing is per block
-
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < readHashByte.length; i++) {
-            sb.append(Integer.toString((readHashByte[i] & 0xff) + 0x100, 16).substring(1));
+            if (HASHING) {
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                md.update(readPiece);
+                //md.update(readBlock); //use if hashing is on per block basis
+                readHashByte = md.digest();
+                hashByte = hashFileManager.readPiece(piecePos);
+                if (Arrays.equals(toByteString(readHashByte), hashByte)) {
+                    System.out.println("Match Successful");
+                    //this.close();
+                    return readPiece;
+                } else {
+                    //Change this exception
+                    throw new InvalidDataException("The hash results do no match");
+                }
+            } else {
+                return readPiece;
+            }
         }
-        System.out.println("Hash of read data: " + sb.toString());
-        
-        if (Arrays.equals(sb.toString().getBytes(), hashByte)) {
-            System.out.println("Match Successful");
-            System.out.println("Exiting read function");
-            this.close();
-            return readPiece;
-        } else {
-            //Change this exception
-            throw new InvalidDataException("The hash results do no match");
-        }
+        return null; //Should return an exception
     }
 
-    private void writePiece(FileSystem hdfs, Path filePath, Path hashFilePath, int piecePos, int blockSize, byte[] piece)
+    private void writePiece(FileSystem hdfs, Path filePath, int piecePos, int blockSize, byte[] piece)
             throws IOException, NoSuchAlgorithmException {
-        this.open();
+        //this.open();
         //System.out.println("Size of writeArray " + writeArray.length);
-        byte[] hash;
+        byte[] hashPiece;
 
         piecesMap.put(piecePos, piece);
         havePieces.set(piecePos);
-        System.out.println(havePieces);
-        int nPiecesWritten = currentBlockNumber * piecesPerBlock;
+        //System.out.println(havePieces);
+
         int ncpieces = havePieces.nextClearBit(0);
-        System.out.println("Number of pieces written "+nPiecesWritten);
-        //System.out.println("Number of contiguous pieces "+(ncpieces - nPiecesWritten));
-        System.out.println("Number of contiguous pieces "+(ncpieces-nPiecesWritten));
-        if (ncpieces - nPiecesWritten == piecesPerBlock) {
-            System.out.println("Writing contiguous pieces to hdfs");
-            for (int i = nPiecesWritten; i <ncpieces; i++) {
-                System.out.println("Writing piece number "+ i);
-                fdos.write(piecesMap.get(i));
-                fdos.flush();
-                hash = hash(piecesMap.get(i));
+        System.out.println(objectType + "Number of pieces written " + nPiecesWritten);
+        System.out.println(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
+        if (HASHING) {
+            nPiecesWritten = currentBlockNumber * piecesPerBlock;
+            if (ncpieces - nPiecesWritten == piecesPerBlock) {
 
-                StringBuilder sb = new StringBuilder();
-                for (int j = 0; j < hash.length; j++) {
-                    sb.append(Integer.toString((hash[j] & 0xff) + 0x100, 16).substring(1));
+                System.out.println(objectType + "Calculating hashes for contiguous pieces");
+                MessageDigest md = MessageDigest.getInstance("SHA-256");
+                for (int i = nPiecesWritten; i < ncpieces; i++) {
+                    //System.out.println("Writing piece number " + i);
+                    md.update(piecesMap.get(i));
                 }
-                System.out.println("Hex format : " + sb.toString());
-                fhos.writeBytes(sb.toString());
 
-                fhos.flush();
+                byte[] hashCal = md.digest();
+                int blockNumber = (int) piecePos / piecesPerBlock;
+                for (int i = nPiecesWritten; i < ncpieces; i++) {
+                    pendingBlocks.put(i, piecesMap.get(i));
+                }
+                pendingBlockHash.put(blockNumber, hashCal);
+                for (int j = nPiecesWritten; j < ncpieces; j++) {
+                    piecesMap.remove(j);
+                }
+                System.out.println(objectType + "Hashing is set to " + HASHING);
+                int writeablePending = pendingBlockHash.size() - blocksWritten;
+                System.out.println(objectType + "Pending number of blocks " + writeablePending);
+                for (int i = 0; i < writeablePending; i++) {
+                    System.out.println(objectType + "Read hash piece number " + (blocksWritten));
+                    hashPiece = hashFileManager.readPiece(blocksWritten);
+                    hashCal = pendingBlockHash.get(i);
+                    System.out.write(toByteString(hashCal));
+                    System.out.println();
+                    System.out.write(hashPiece);
+                    if (Arrays.equals(toByteString(hashCal), hashPiece)) {
+                        System.out.println(objectType + "Match Successful: Data received is correct");
+                        System.out.println(objectType + "Writing contiguous pieces to hdfs");
+                        for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
+                            System.out.println(objectType + "Writing piece number " + j);
+                            fdos.write(pendingBlocks.get(j));
+                            fdos.flush();
+                        }
+                        //Delete the pieces written to keep the size of pieceMap small      
+                        blocksWritten++;
+                    } else {
+                        //Change this exception
+                        throw new InvalidDataException("The hash results do no match");
+                    }
+                }
+                for (int i = 0; i < writeablePending; i++) {
+                    pendingBlockHash.remove(i);
+                    for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
+                        pendingBlocks.remove(j);
+                    }
+                }
+
+                currentBlockNumber++;
             }
-            //Delete the pieces written to keep the size of pieceMap small
-            for (int i = nPiecesWritten; i <ncpieces; i++) {
-                piecesMap.remove(i);   
-            }
-            //System.out.println("Size of pieceMap is: "+ piecesMap.size());
-            currentBlockNumber++;
+        } else {
+            /**
+             * for (int i = nPiecesWritten; i < ncpieces; i++) {
+             * System.out.println("Writing piece number " + i);
+             * fdos.write(piecesMap.get(i)); fdos.flush(); } for (int i =
+             * nPiecesWritten; i < ncpieces; i++) { piecesMap.remove(i); }
+             * currentBlockNumber++;
+             *
+             */
+            System.out.println(objectType + "Writing piece number " + piecePos);
+            fdos.write(piecesMap.get(piecePos));
+            fdos.flush();
+            //piecesMap.remove(piecePos);
+            nPiecesWritten++;
         }
-        this.close();
+        //this.close();
     }
 
     //TODO Change type of blockSize to long
     @Override
     public byte[] readPiece(int piecePos) throws IOException, NoSuchAlgorithmException {
         //FileSystem hdfs = FileSystem.get(new Configuration());
-        Path[] P;
-        P = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
-        Path filePath = P[0], hashFilePath = P[1];
+
+        Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
+
         //blockSize = (int)hdfs.getFileStatus(filePath).getBlockSize();
-        return readPiece(hdfs, filePath, hashFilePath, piecePos, blockSize);
+        return readPiece(hdfs, filePath, piecePos, blockSize);
     }
 
     //TODO There is no need for the piecePos in this case. As the HDFS only provides the append
@@ -205,11 +307,11 @@ public class HDFSRWFile implements Storage {
     @Override
     public void writePiece(int piecePos, byte[] piece) throws IOException, NoSuchAlgorithmException {
         //FileSystem hdfs = FileSystem.get(new Configuration());
-        Path[] P;
-        P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, false);
-        Path filePath = P[0], hashFilePath = P[1];
+
+        Path filePath = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, false);
+
         //blockSize = (int)hdfs.getFileStatus(filePath).getBlockSize();
-        writePiece(hdfs, filePath, hashFilePath, piecePos, blockSize, piece);
+        writePiece(hdfs, filePath, piecePos, blockSize, piece);
     }
 
 }

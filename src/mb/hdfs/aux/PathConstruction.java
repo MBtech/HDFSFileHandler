@@ -24,23 +24,21 @@ public class PathConstruction {
      * @return
      * @throws IOException 
      */
-    public static Path[] CreatePathAndFile(FileSystem hdfs, String folderName, String fileName, boolean overwrite) throws IOException{
+    public static Path CreatePathAndFile(FileSystem hdfs, String folderName, String fileName, boolean overwrite) throws IOException{
         Path HomePath = hdfs.getHomeDirectory();
         Path newFolderPath = new Path("/" + folderName);
         newFolderPath = Path.mergePaths(HomePath, newFolderPath);
         Path newFilePath = new Path(newFolderPath + "/" + fileName);
-        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash1");
+       
         
         //Delete the folder and the file if it already exists
         if (hdfs.exists(newFolderPath) && overwrite){
            hdfs.delete(newFolderPath,true);
            hdfs.createNewFile(newFilePath);
-           hdfs.createNewFile(newHashFilePath);
+           
         }
-        //Creating a file in HDFS
-        
-        Path [] returnPath = new Path[]{newFilePath, newHashFilePath};
-        return returnPath;
+       
+        return newFilePath;
     }
     /**
      * Create and return a file path for reading 
@@ -49,13 +47,13 @@ public class PathConstruction {
      * @param fileName Name of the file to be read
      * @return 
      */
-    public static Path[] CreateReadPath(FileSystem hdfs, String folderName, String fileName){
+    public static Path CreateReadPath(FileSystem hdfs, String folderName, String fileName){
         Path homePath = hdfs.getHomeDirectory();
         Path newFolderPath = new Path("/" + folderName);
         newFolderPath = Path.mergePaths(homePath, newFolderPath);
         Path newFilePath = new Path(newFolderPath + "/" + fileName);
-        Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash1");
-        Path [] returnPath = new Path[]{newFilePath, newHashFilePath};
-        return returnPath;
+        //Path newHashFilePath = new Path(newFolderPath + "/" + fileName + "-hash1");
+      
+        return newFilePath;
     }
 }

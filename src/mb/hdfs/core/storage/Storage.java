@@ -17,4 +17,5 @@ public interface Storage {
     public byte[] readPiece(int piecePos) throws IOException, NoSuchAlgorithmException;
     
     public void writePiece(int piecePos, byte[] piece) throws IOException, NoSuchAlgorithmException;
+    public void close() throws IOException;
 }
