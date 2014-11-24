@@ -263,6 +263,8 @@ public class HDFSRWFile implements Storage {
                         fdos.write(pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                         fdos.flush();
                     }
+                    //Delete the pieces written to keep the size of pieceMap small      
+                    blocksWritten++;
                 } else {
                     //Change this exception
                     throw new InvalidDataException("The hash results do no match");
