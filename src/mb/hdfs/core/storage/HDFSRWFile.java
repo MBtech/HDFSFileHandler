@@ -87,18 +87,19 @@ public class HDFSRWFile implements Storage {
         byte[] hashPiece;
         byte[] hashCal;
         for (int i = 0; i < pendingBlockHash.size(); i++) {
+            System.out.println(objectType + "Number of pending blocks " + pendingBlockHash.size());
             System.out.println(objectType + "Read hash piece number " + (blocksWritten));
             hashPiece = hashFileManager.readPiece(blocksWritten);
-            hashCal = pendingBlockHash.get(i);
+            hashCal = pendingBlockHash.get(blocksWritten);
             System.out.write(toByteString(hashCal));
             System.out.println();
             System.out.write(hashPiece);
             if (Arrays.equals(toByteString(hashCal), hashPiece)) {
                 System.out.println(objectType + "Match Successful: Data received is correct");
                 System.out.println(objectType + "Writing contiguous pieces to hdfs");
-                for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
-                    System.out.println(objectType + "Writing piece number " + j);
-                    fdos.write(pendingBlocks.get(j));
+                for (int j = 0; j < piecesPerBlock; j++) {
+                    System.out.println(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
+                    fdos.write(pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                     fdos.flush();
                 }
                 //Delete the pieces written to keep the size of pieceMap small      
@@ -109,9 +110,9 @@ public class HDFSRWFile implements Storage {
             }
         }
         for (int i = 0; i < pendingBlockHash.size(); i++) {
-            pendingBlockHash.remove(i);
-            for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
-                pendingBlocks.remove(j);
+            pendingBlockHash.remove(blocksWritten);
+            for (int j = 0; j < piecesPerBlock; j++) {
+                pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
             }
         }
         //this.fhos.close();
@@ -179,7 +180,7 @@ public class HDFSRWFile implements Storage {
                 } else {
                     System.out.println(objectType + "Reading from index " + pieceSize * piecePos);
                     System.out.println(objectType + "Number of bytes to read " + pieceSize);
-                    System.out.println(fdis.available());
+                    //System.out.println(fdis.available());
                     fdis.readFully(pieceSize * piecePos, readPiece, 0, pieceSize);
                 }
             }
@@ -199,6 +200,7 @@ public class HDFSRWFile implements Storage {
                     throw new InvalidDataException("The hash results do no match");
                 }
             } else {
+                System.out.println("Returning read piece");
                 return readPiece;
             }
         }
@@ -238,39 +240,40 @@ public class HDFSRWFile implements Storage {
                 for (int j = nPiecesWritten; j < ncpieces; j++) {
                     piecesMap.remove(j);
                 }
-                System.out.println(objectType + "Hashing is set to " + HASHING);
-                int writeablePending = pendingBlockHash.size() - blocksWritten;
-                System.out.println(objectType + "Pending number of blocks " + writeablePending);
-                for (int i = 0; i < writeablePending; i++) {
-                    System.out.println(objectType + "Read hash piece number " + (blocksWritten));
-                    hashPiece = hashFileManager.readPiece(blocksWritten);
-                    hashCal = pendingBlockHash.get(i);
-                    System.out.write(toByteString(hashCal));
-                    System.out.println();
-                    System.out.write(hashPiece);
-                    if (Arrays.equals(toByteString(hashCal), hashPiece)) {
-                        System.out.println(objectType + "Match Successful: Data received is correct");
-                        System.out.println(objectType + "Writing contiguous pieces to hdfs");
-                        for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
-                            System.out.println(objectType + "Writing piece number " + j);
-                            fdos.write(pendingBlocks.get(j));
-                            fdos.flush();
-                        }
-                        //Delete the pieces written to keep the size of pieceMap small      
-                        blocksWritten++;
-                    } else {
-                        //Change this exception
-                        throw new InvalidDataException("The hash results do no match");
-                    }
-                }
-                for (int i = 0; i < writeablePending; i++) {
-                    pendingBlockHash.remove(i);
-                    for (int j = i * piecesPerBlock; j < piecesPerBlock; j++) {
-                        pendingBlocks.remove(j);
-                    }
-                }
 
                 currentBlockNumber++;
+            }
+            int writeablePending = hashFileManager.contiguousStart() - blocksWritten;
+            System.out.println(objectType + "Pending number of blocks " + writeablePending);
+            System.out.println(objectType + "Number of blocks in pending list " + pendingBlockHash.size());
+            for (int i = 0; i < writeablePending; i++) {
+                byte[] hashCal;
+                System.out.println(objectType + "Read hash piece number " + (blocksWritten));
+                hashPiece = hashFileManager.readPiece(blocksWritten);
+                System.out.println(pendingBlockHash);
+                hashCal = pendingBlockHash.get(blocksWritten);
+                System.out.write(toByteString(hashCal));
+                System.out.println();
+                System.out.write(hashPiece);
+                if (Arrays.equals(toByteString(hashCal), hashPiece)) {
+                    System.out.println(objectType + "Match Successful: Data received is correct");
+                    System.out.println(objectType + "Writing contiguous pieces to hdfs");
+                    for (int j = 0; j < piecesPerBlock; j++) {
+                        System.out.println(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
+                        fdos.write(pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
+                        fdos.flush();
+                    }
+                } else {
+                    //Change this exception
+                    throw new InvalidDataException("The hash results do no match");
+                }
+            }
+            for (int i = 0; i < writeablePending; i++) {
+                System.out.println("Removing pending hash blocks");
+                pendingBlockHash.remove(blocksWritten);
+                for (int j = 0; j < piecesPerBlock; j++) {
+                    pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
+                }
             }
         } else {
             /**
