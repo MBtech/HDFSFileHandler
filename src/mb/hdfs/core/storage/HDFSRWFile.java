@@ -5,13 +5,8 @@
  */
 package mb.hdfs.core.storage;
 
-import com.sun.media.sound.InvalidDataException;
 import java.io.IOException;
-import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.TreeMap;
 import mb.hdfs.aux.PathConstruction;
 import mb.hdfs.core.filemanager.HDFSFileManager;
 import org.apache.hadoop.conf.Configuration;
@@ -32,10 +27,7 @@ public class HDFSRWFile implements Storage {
     private final String fileName, folderName;
     private final int blockSize;
     private final int pieceSize;
-    private TreeMap<Integer, byte[]> piecesMap = new TreeMap<>();
     private final FSDataOutputStream fdos;
-    private TreeMap<Integer, byte[]> pendingBlocks = new TreeMap<>();
-    private TreeMap<Integer, byte[]> pendingBlockHash = new TreeMap<>();
     private final FileSystem hdfs;
     private final Path P;
 

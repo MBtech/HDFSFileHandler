@@ -8,6 +8,7 @@ package mb.hdfs.core.filemanager;
 import java.io.IOException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Set;
+import mb.hdfs.aux.HashMismatchException;
 
 /**
  *
@@ -20,5 +21,5 @@ public interface FileManager {
     public byte[] readPiece(int piecePos);
     public void writePiece(int piecePos, byte[] piece);
     public int contiguousStart();
-    public void close() throws IOException, NoSuchAlgorithmException; //Extra function
+    public void close() throws IOException, NoSuchAlgorithmException, HashMismatchException; //Extra function
 }

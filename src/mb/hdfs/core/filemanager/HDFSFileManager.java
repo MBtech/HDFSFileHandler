@@ -5,7 +5,6 @@
  */
 package mb.hdfs.core.filemanager;
 
-import com.sun.media.sound.InvalidDataException;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -15,6 +14,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import mb.hdfs.aux.HashMismatchException;
 import mb.hdfs.core.storage.Storage;
 import mb.hdfs.core.piecetracker.PieceTracker;
 
@@ -84,7 +84,7 @@ public class HDFSFileManager implements FileManager{
     public byte[] readPiece(int piecePos) {
         try {
             return readPiece(piecePos, blockSize);
-        } catch (IOException | NoSuchAlgorithmException ex) {
+        } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
             Logger.getLogger(HDFSFileManager.class.getName()).log(Level.SEVERE, null, ex);
         }
         return null;
@@ -95,7 +95,7 @@ public class HDFSFileManager implements FileManager{
         pieceTracker.addPiece(piecePos);
         try {
             writePiece(piecePos, blockSize, piece);
-        } catch (IOException | NoSuchAlgorithmException ex) {
+        } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
             Logger.getLogger(HDFSFileManager.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
@@ -121,7 +121,7 @@ public class HDFSFileManager implements FileManager{
      * @throws IOException
      */
     private byte[] readPiece(int piecePos, int blockSize)
-            throws IOException, NoSuchAlgorithmException {
+            throws IOException, NoSuchAlgorithmException, HashMismatchException {
         //If the requested piece is the one that we  have already written
         if (nPiecesWritten >= piecePos) {
             // TODO: Should these be moved because hdfs open is being called with every read operation.
@@ -167,7 +167,7 @@ public class HDFSFileManager implements FileManager{
                     return readPiece;
                 } else {
                     //Change this exception
-                    throw new InvalidDataException("The hash results do no match");
+                    throw new HashMismatchException("The hash results do no match");
                 }
             } else {
                 System.out.println("Returning read piece");
@@ -178,7 +178,7 @@ public class HDFSFileManager implements FileManager{
     }
 
     private void writePiece(int piecePos, int blockSize, byte[] piece)
-            throws IOException, NoSuchAlgorithmException {
+            throws IOException, NoSuchAlgorithmException, HashMismatchException {
         byte[] hashPiece;
         piecesMap.put(piecePos, piece);
         havePieces.set(piecePos);
@@ -237,7 +237,7 @@ public class HDFSFileManager implements FileManager{
                     blocksWritten++;
                 } else {
                     //Change this exception
-                    throw new InvalidDataException("The hash results do no match");
+                    throw new HashMismatchException("The hash results do no match");
                 }
             }
 
@@ -254,7 +254,7 @@ public class HDFSFileManager implements FileManager{
      * @throws IOException
      */
     @Override
-    public void close() throws IOException, NoSuchAlgorithmException{
+    public void close() throws IOException, NoSuchAlgorithmException, HashMismatchException{
         byte[] hashPiece;
         byte[] hashCal;
         int npending = pendingBlockHash.size();
@@ -281,7 +281,7 @@ public class HDFSFileManager implements FileManager{
                 blocksWritten++;
             } else {
                 //Change this exception
-                throw new InvalidDataException("The hash results do no match");
+                throw new HashMismatchException("The hash results do no match");
             }
         }
     }
