@@ -15,14 +15,8 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import mb.hdfs.aux.PathConstruction;
 import mb.hdfs.core.storage.Storage;
 import mb.hdfs.core.piecetracker.PieceTracker;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataInputStream;
-import org.apache.hadoop.fs.FSDataOutputStream;
-import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.Path;
 
 /**
  *
@@ -33,7 +27,6 @@ public class HDFSFileManager implements FileManager{
     private final Storage file;
     private final PieceTracker pieceTracker;
     private static final int HASHSIZE = 64;
-    private final String fileName, folderName;
     private final int blockSize;
     private final int pieceSize;
     private final int piecesPerBlock;
@@ -53,8 +46,6 @@ public class HDFSFileManager implements FileManager{
             throws IOException {
         this.file = file;
         this.pieceTracker = pieces;
-        this.fileName = fileName;
-        this.folderName = folderName;
         this.blockSize = blockSize;
         this.pieceSize = pieceSize;
         this.piecesPerBlock = (int) blockSize / pieceSize;

@@ -32,18 +32,10 @@ public class HDFSRWFile implements Storage {
     private final String fileName, folderName;
     private final int blockSize;
     private final int pieceSize;
-    private final int piecesPerBlock;
-    private int currentBlockNumber;
-    private final BitSet havePieces;
     private TreeMap<Integer, byte[]> piecesMap = new TreeMap<>();
-    private boolean HASHING;
     private final FSDataOutputStream fdos;
-    private final HDFSFileManager hashFileManager;
-    private int nPiecesWritten;
-    private int blocksWritten;
     private TreeMap<Integer, byte[]> pendingBlocks = new TreeMap<>();
     private TreeMap<Integer, byte[]> pendingBlockHash = new TreeMap<>();
-    private String objectType;
     private final FileSystem hdfs;
     private final Path P;
 
@@ -53,21 +45,9 @@ public class HDFSRWFile implements Storage {
         this.folderName = folderName;
         this.blockSize = blockSize;
         this.pieceSize = pieceSize;
-        this.piecesPerBlock = (int) blockSize / pieceSize;
-        havePieces = new BitSet();
-        currentBlockNumber = 0;
-        nPiecesWritten = 0;
-        blocksWritten = 0;
         hdfs = FileSystem.get(new Configuration());
         P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
         fdos = hdfs.create(P, true, blockSize, (short) 1, blockSize);
-        HASHING = false;
-        this.objectType = "Hash Manager: ";
-        if (hashFileMngr != null) {
-            this.objectType = "Data Manager: ";
-            this.HASHING = true;
-        }
-        hashFileManager = hashFileMngr;
         if (blockSize % pieceSize != 0) {
             throw new IllegalArgumentException("Illegal pieceSize: Size should be multiple of blockSize");
         }
@@ -98,7 +78,6 @@ public class HDFSRWFile implements Storage {
     public void writePiece(int piecePos, byte[] piece) throws IOException, NoSuchAlgorithmException {
         fdos.write(piece);
         fdos.flush();
-        //writePiece(hdfs, filePath, piecePos, blockSize, piece);
     }
 
 }
