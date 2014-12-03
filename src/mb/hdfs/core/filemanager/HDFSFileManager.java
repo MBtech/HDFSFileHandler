@@ -22,7 +22,7 @@ import mb.hdfs.core.piecetracker.PieceTracker;
  *
  * @author Muhammad Bilal <mubil@kth.se>
  */
-public class HDFSFileManager implements FileManager{
+public class HDFSFileManager implements FileManager {
 
     private final Storage file;
     private final PieceTracker pieceTracker;
@@ -32,16 +32,14 @@ public class HDFSFileManager implements FileManager{
     private int currentBlockNumber;
     private final BitSet havePieces;
     private TreeMap<Integer, byte[]> piecesMap = new TreeMap<>();
-    private boolean HASHING;
-    private final HDFSFileManager hashFileManager;
+    private final FileManager hashFileManager;
     private int nPiecesWritten;
     private int blocksWritten;
     private TreeMap<Integer, byte[]> pendingBlocks = new TreeMap<>();
     private TreeMap<Integer, byte[]> pendingBlockHash = new TreeMap<>();
     private String objectType;
-    
-    
-    public HDFSFileManager(Storage file, PieceTracker pieces,String folderName, String fileName, int blockSize, int pieceSize, HDFSFileManager hashFileMngr)
+
+    public HDFSFileManager(Storage file, PieceTracker pieces, String folderName, String fileName, int blockSize, int pieceSize, FileManager hashFileMngr)
             throws IOException {
         this.file = file;
         this.pieceTracker = pieces;
@@ -52,12 +50,8 @@ public class HDFSFileManager implements FileManager{
         currentBlockNumber = 0;
         nPiecesWritten = 0;
         blocksWritten = 0;
-        HASHING = false;
-        this.objectType = "Hash Manager: ";
-        if (hashFileMngr != null) {
-            this.objectType = "Data Manager: ";
-            this.HASHING = true;
-        }
+        this.objectType = "Data Manager: ";
+
         hashFileManager = hashFileMngr;
         if (blockSize % pieceSize != 0) {
             throw new IllegalArgumentException("Illegal pieceSize: Size should be multiple of blockSize");
@@ -73,7 +67,7 @@ public class HDFSFileManager implements FileManager{
     public Set<Integer> nextPiecesNeeded(int n, int startPos) {
         return pieceTracker.nextPiecesNeeded(n, startPos);
     }
-    
+
     @Override
     public boolean hasPiece(int piecePos) {
         return pieceTracker.hasPiece(piecePos);
@@ -91,7 +85,8 @@ public class HDFSFileManager implements FileManager{
 
     @Override
     public void writePiece(int piecePos, byte[] piece) {
-        pieceTracker.addPiece(piecePos);
+        // This operation has to be deferred to the moment when hashes are matched
+        //pieceTracker.addPiece(piecePos); 
         try {
             writePiece(piecePos, blockSize, piece);
         } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
@@ -103,13 +98,13 @@ public class HDFSFileManager implements FileManager{
     public int contiguousStart() {
         return pieceTracker.contiguousStart();
     }
-    
+
     @Override
     public String toString() {
         return file.toString();
     }
-    
-     /**
+
+    /**
      * Read the piece specified by the piece position
      *
      * @param hdfs File system handle
@@ -132,42 +127,33 @@ public class HDFSFileManager implements FileManager{
             int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
             System.out.println(objectType + "No. of pieces Per block is " + piecesPerBlock);
             System.out.println(objectType + "Block position of concern is " + blockPos);
-            int discardBlocks = blockPos;
             int ppInBlock = piecePos % piecesPerBlock;
 
-            if (HASHING) {
-                System.out.println(objectType + "Reading from index " + blockSize * discardBlocks);
-                System.out.println(objectType + "Number of bytes to read " + blockSize);
-                readBlock = file.readBlock(discardBlocks);
-                System.out.println(objectType + "Piece Size is " + pieceSize + " and start index is " + ppInBlock * pieceSize);
-                //Get the piece of interest from the block of interest
-                System.arraycopy(readBlock, ppInBlock * pieceSize, readPiece, 0, pieceSize);
-            } else {
-                if (piecesMap.containsKey(piecePos)) {
-                    System.out.println(objectType + "The piece is in the pending queue");
-                    readPiece = piecesMap.get(piecePos);
-                } else {
-                    System.out.println(objectType + "Reading from index " + pieceSize * piecePos);
-                    System.out.println(objectType + "Number of bytes to read " + pieceSize);
-                    readPiece = file.readPiece(piecePos);
-                }
-            }
+            System.out.println(objectType + "Reading from index " + blockSize * blockPos);
+            System.out.println(objectType + "Number of bytes to read " + blockSize);
+            readBlock = file.readBlock(blockPos);
+            System.out.println(objectType + "Piece Size is " + pieceSize + " and start index is " + ppInBlock * pieceSize);
+            //Get the piece of interest from the block of interest
+            System.arraycopy(readBlock, ppInBlock * pieceSize, readPiece, 0, pieceSize);
 
-            if (HASHING) {
-                MessageDigest md = MessageDigest.getInstance("SHA-256");
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            /**for(int i =0;i<piecesPerBlock;i++){
                 md.update(readBlock);
-                readHashByte = md.digest();
-                hashByte = hashFileManager.readPiece(blockPos);
-                if (Arrays.equals(toByteString(readHashByte), hashByte)) {
-                    System.out.println("Match Successful");
-                    return readPiece;
-                } else {
-                    //Change this exception
-                    throw new HashMismatchException("The hash results do no match");
-                }
-            } else {
-                System.out.println("Returning read piece");
+                System.out.println("Piece number "+ i);
+            }**/
+            
+            md.update(readBlock);
+            readHashByte = md.digest();
+            hashByte = hashFileManager.readPiece(blockPos);
+            if (Arrays.equals(toByteString(readHashByte), hashByte)) {
+                System.out.println("Match Successful");
                 return readPiece;
+            } else {
+                //Change this exception
+                System.out.write(hashByte);
+                System.out.println();
+                System.out.write(toByteString(readHashByte));
+                throw new HashMismatchException("The hash results do no match");
             }
         }
         return null; //Should return an exception
@@ -179,37 +165,42 @@ public class HDFSFileManager implements FileManager{
         piecesMap.put(piecePos, piece);
         havePieces.set(piecePos);
         int ncpieces = havePieces.nextClearBit(0);
-        
+
         System.out.println(objectType + "Number of pieces written " + nPiecesWritten);
         System.out.println(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
-        if (HASHING) {
-            nPiecesWritten = currentBlockNumber * piecesPerBlock;
-            if (ncpieces - nPiecesWritten == piecesPerBlock) {
+        nPiecesWritten = currentBlockNumber * piecesPerBlock;
+        if (ncpieces - nPiecesWritten == piecesPerBlock) {
 
-                System.out.println(objectType + "Calculating hashes for contiguous pieces");
-                MessageDigest md = MessageDigest.getInstance("SHA-256");
-                for (int i = nPiecesWritten; i < ncpieces; i++) {
-                    //System.out.println("Writing piece number " + i);
-                    md.update(piecesMap.get(i));
-                }
-                byte[] hashCal = md.digest();
-                int blockNumber = (int) piecePos / piecesPerBlock;
-                for (int i = nPiecesWritten; i < ncpieces; i++) {
-                    pendingBlocks.put(i, piecesMap.get(i));
-                }
-                pendingBlockHash.put(blockNumber, hashCal);
-                for (int j = nPiecesWritten; j < ncpieces; j++) {
-                    piecesMap.remove(j);
-                }
-                currentBlockNumber++;
+            System.out.println(objectType + "Calculating hashes for contiguous pieces");
+            byte[] block  = new byte[blockSize];
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            for (int i = nPiecesWritten; i < ncpieces; i++) {
+                //System.out.println("Writing piece number " + i);
+                md.update(piecesMap.get(i));
             }
-            int writeablePending = hashFileManager.contiguousStart() - blocksWritten;
-            //System.out.println(objectType + "Pending number of blocks " + writeablePending);
-            //System.out.println(objectType + "Number of blocks in pending list " + pendingBlockHash.size());
-            for (int i = 0; i < writeablePending; i++) {
-                byte[] hashCal;
-                //System.out.println(objectType + "Read hash piece number " + (blocksWritten));
+            
+            byte[] hashCal = md.digest();
+            int blockNumber = (int) piecePos / piecesPerBlock;
+            for (int i = nPiecesWritten; i < ncpieces; i++) {
+                pendingBlocks.put(i, piecesMap.get(i));
+            }
+            pendingBlockHash.put(blockNumber, hashCal);
+            for (int j = nPiecesWritten; j < ncpieces; j++) {
+                piecesMap.remove(j);
+            }
+            currentBlockNumber++;
+        }
+        int hashBlkAvail = hashFileManager.contiguousStart() - blocksWritten;
+        //System.out.println(objectType + "Pending number of blocks " + writeablePending);
+        //System.out.println(objectType + "Number of blocks in pending list " + pendingBlockHash.size());
+        
+        //Iterate over all the pending blocks whose hashes we have
+        for (int i = 0; i < hashBlkAvail; i++) {
+            byte[] hashCal;
+            //System.out.println(objectType + "Read hash piece number " + (blocksWritten));
+            if (pendingBlockHash.containsKey(blocksWritten)) {
                 hashPiece = hashFileManager.readPiece(blocksWritten);
+
                 hashCal = pendingBlockHash.get(blocksWritten);
                 System.out.write(toByteString(hashCal));
                 System.out.println();
@@ -220,6 +211,7 @@ public class HDFSFileManager implements FileManager{
                     for (int j = 0; j < piecesPerBlock; j++) {
                         System.out.println(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
                         file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
+                        pieceTracker.addPiece(blocksWritten * piecesPerBlock + j);
                     }
                     System.out.println("Removing pending hash blocks");
                     pendingBlockHash.remove(blocksWritten);
@@ -228,39 +220,39 @@ public class HDFSFileManager implements FileManager{
                     }
                     //Delete the pieces written to keep the size of pieceMap small      
                     blocksWritten++;
+
                 } else {
                     //Change this exception
                     throw new HashMismatchException("The hash results do no match");
                 }
+            } else {
+                break;
             }
-
-        } else {
-            System.out.println(objectType + "Writing piece number " + piecePos);
-            file.writePiece(piecePos, piecesMap.get(piecePos));
-            //piecesMap.remove(piecePos);
-            nPiecesWritten++;
         }
     }
-    
+
     /**
      *
      * @throws IOException
+     * @throws java.security.NoSuchAlgorithmException
+     * @throws mb.hdfs.aux.HashMismatchException
      */
     @Override
-    public void close() throws IOException, NoSuchAlgorithmException, HashMismatchException{
+    public void close() throws IOException, NoSuchAlgorithmException, HashMismatchException {
         byte[] hashPiece;
         byte[] hashCal;
         int npending = pendingBlockHash.size();
         for (int i = 0; i < npending; i++) {
             hashPiece = hashFileManager.readPiece(blocksWritten);
             hashCal = pendingBlockHash.get(blocksWritten);
-            /** LOGGING
-            System.out.println(objectType + "Number of pending blocks " + pendingBlockHash.size());
-            System.out.println(objectType + "Read hash piece number " + (blocksWritten));
-            System.out.write(toByteString(hashCal));
-            System.out.println();
-            System.out.write(hashPiece);
-            * */
+            /**
+             * LOGGING System.out.println(objectType + "Number of pending blocks
+             * " + pendingBlockHash.size()); System.out.println(objectType +
+             * "Read hash piece number " + (blocksWritten));
+             * System.out.write(toByteString(hashCal)); System.out.println();
+             * System.out.write(hashPiece);
+             *
+             */
             if (Arrays.equals(toByteString(hashCal), hashPiece)) {
                 //System.out.println(objectType + "Match Successful: Data received is correct");
                 //System.out.println(objectType + "Writing contiguous pieces to hdfs");
@@ -286,7 +278,7 @@ public class HDFSFileManager implements FileManager{
         for (int i = 0; i < hash.length; i++) {
             sb.append(Integer.toString((hash[i] & 0xff) + 0x100, 16).substring(1));
         }
-        System.out.println("Hash of written data: " + sb.toString());
+        //System.out.println("Hash of written data: " + sb.toString());
         return sb.toString().getBytes();
     }
 }

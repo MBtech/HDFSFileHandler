@@ -62,6 +62,6 @@ public class HDFSPieceTracker implements PieceTracker{
     public int contiguousStart() {
         int nextClear = pieces.nextClearBit(0);
         //return (nextClear == 0 ? 0 : nextClear-1);
-        return (nextClear == 0 ? 0 : nextClear);
+        return (nextClear == 0 ? 0 : nextClear); // changed value for my purpose
     } 
 }

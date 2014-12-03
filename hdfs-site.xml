@@ -24,11 +24,11 @@
 
 	<property>
   		<name>dfs.name.dir</name>
-  		<value>/home/mb/hadoopstorage1/name/</value>
+  		<value>/home/mb/hadoopstorage/name/</value>
 	</property>
 
 	<property>
   		<name>dfs.data.dir</name>
-  		<value>/home/mb/hadoopstorage1/data/</value>
+  		<value>/home/mb/hadoopstorage/data/</value>
 	</property>
 </configuration>
