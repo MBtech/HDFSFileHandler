@@ -23,7 +23,6 @@ import org.apache.hadoop.fs.Path;
  * @author Muhammad Bilal <mubil@kth.se>
  */
 public class HDFSRWFile implements Storage {
-    private static final int HASHSIZE = 64;
     private final String fileName, folderName;
     private final int blockSize;
     private final int pieceSize;
@@ -37,7 +36,10 @@ public class HDFSRWFile implements Storage {
         this.folderName = folderName;
         this.blockSize = blockSize;
         this.pieceSize = pieceSize;
-        hdfs = FileSystem.get(new Configuration());
+        Configuration conf = new Configuration();
+        conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/core-site.xml");
+        conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/hdfs-site.xml");
+        hdfs = FileSystem.get(conf);
         P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
         fdos = hdfs.create(P, true, blockSize, (short) 1, blockSize);
         if (blockSize % pieceSize != 0) {

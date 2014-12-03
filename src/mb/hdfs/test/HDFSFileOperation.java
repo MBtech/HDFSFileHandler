@@ -5,15 +5,11 @@
  */
 package mb.hdfs.test;
 
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.*;
 import java.io.*;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Set;
 import mb.hdfs.aux.UnitConversion;
 import mb.hdfs.core.filemanager.HDFSFileManager;
 import mb.hdfs.core.piecetracker.HDFSPieceTracker;
@@ -61,7 +57,7 @@ public class HDFSFileOperation {
         HDFSFileManager dataFileManager = new HDFSFileManager(s, p, "MyTestFolder", "MyTestFile", UnitConversion.mbToBytes(1), UnitConversion.kbToBytes(256), hashFileManager);
 
         md = MessageDigest.getInstance("SHA-256");
-        List <byte[]> dataPiece = new ArrayList<byte[]>();
+        List <byte[]> dataPiece = new ArrayList<>();
         for (int j = 0; j < 3; j++) {
             for (int i = 0; i < 4; i++) {
                 dataPiece.add(j*4+i, new DataGen().randDataGen(UnitConversion.kbToBytes(256)));

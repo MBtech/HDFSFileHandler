@@ -26,7 +26,6 @@ public class HDFSFileManager implements FileManager{
 
     private final Storage file;
     private final PieceTracker pieceTracker;
-    private static final int HASHSIZE = 64;
     private final int blockSize;
     private final int pieceSize;
     private final int piecesPerBlock;
@@ -159,9 +158,6 @@ public class HDFSFileManager implements FileManager{
                 md.update(readBlock);
                 readHashByte = md.digest();
                 hashByte = hashFileManager.readPiece(blockPos);
-                System.out.write(toByteString(readHashByte));
-                System.out.println();
-                System.out.write(hashByte); //Correct
                 if (Arrays.equals(toByteString(readHashByte), hashByte)) {
                     System.out.println("Match Successful");
                     return readPiece;
@@ -196,7 +192,6 @@ public class HDFSFileManager implements FileManager{
                     //System.out.println("Writing piece number " + i);
                     md.update(piecesMap.get(i));
                 }
-
                 byte[] hashCal = md.digest();
                 int blockNumber = (int) piecePos / piecesPerBlock;
                 for (int i = nPiecesWritten; i < ncpieces; i++) {
@@ -206,17 +201,15 @@ public class HDFSFileManager implements FileManager{
                 for (int j = nPiecesWritten; j < ncpieces; j++) {
                     piecesMap.remove(j);
                 }
-
                 currentBlockNumber++;
             }
             int writeablePending = hashFileManager.contiguousStart() - blocksWritten;
-            System.out.println(objectType + "Pending number of blocks " + writeablePending);
-            System.out.println(objectType + "Number of blocks in pending list " + pendingBlockHash.size());
+            //System.out.println(objectType + "Pending number of blocks " + writeablePending);
+            //System.out.println(objectType + "Number of blocks in pending list " + pendingBlockHash.size());
             for (int i = 0; i < writeablePending; i++) {
                 byte[] hashCal;
-                System.out.println(objectType + "Read hash piece number " + (blocksWritten));
+                //System.out.println(objectType + "Read hash piece number " + (blocksWritten));
                 hashPiece = hashFileManager.readPiece(blocksWritten);
-                System.out.println(pendingBlockHash);
                 hashCal = pendingBlockHash.get(blocksWritten);
                 System.out.write(toByteString(hashCal));
                 System.out.println();
@@ -259,16 +252,18 @@ public class HDFSFileManager implements FileManager{
         byte[] hashCal;
         int npending = pendingBlockHash.size();
         for (int i = 0; i < npending; i++) {
-            System.out.println(objectType + "Number of pending blocks " + pendingBlockHash.size());
-            System.out.println(objectType + "Read hash piece number " + (blocksWritten));
             hashPiece = hashFileManager.readPiece(blocksWritten);
             hashCal = pendingBlockHash.get(blocksWritten);
+            /** LOGGING
+            System.out.println(objectType + "Number of pending blocks " + pendingBlockHash.size());
+            System.out.println(objectType + "Read hash piece number " + (blocksWritten));
             System.out.write(toByteString(hashCal));
             System.out.println();
             System.out.write(hashPiece);
+            * */
             if (Arrays.equals(toByteString(hashCal), hashPiece)) {
-                System.out.println(objectType + "Match Successful: Data received is correct");
-                System.out.println(objectType + "Writing contiguous pieces to hdfs");
+                //System.out.println(objectType + "Match Successful: Data received is correct");
+                //System.out.println(objectType + "Writing contiguous pieces to hdfs");
                 for (int j = 0; j < piecesPerBlock; j++) {
                     System.out.println(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
                     file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
