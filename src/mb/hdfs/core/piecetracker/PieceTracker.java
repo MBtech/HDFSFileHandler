@@ -17,5 +17,7 @@ public interface PieceTracker {
     public Set<Integer> nextPiecesNeeded(int n, int startPos);
     public boolean hasPiece(int piecePos);
     public void addPiece(int piecePos);
+    //Extra function to remove an added piece in case of hash mismatch
+    public void clearPiece(int piecePos); 
     public int contiguousStart();
 }

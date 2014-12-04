@@ -39,7 +39,7 @@ public class HDFSPieceTracker implements PieceTracker{
      */
     @Override
     public Set<Integer> nextPiecesNeeded(int n, int startPos) {
-        Set<Integer> result = new TreeSet<Integer>(); // why TreeSet? It could be linkedHashset
+        Set<Integer> result = new TreeSet<Integer>(); 
         int nextPos = startPos;
         while(result.size() < n) {
             nextPos = pieces.nextClearBit(nextPos);
@@ -64,4 +64,9 @@ public class HDFSPieceTracker implements PieceTracker{
         //return (nextClear == 0 ? 0 : nextClear-1);
         return (nextClear == 0 ? 0 : nextClear); // changed value for my purpose
     } 
+
+    @Override
+    public void clearPiece(int piecePos) {
+        pieces.clear(piecePos);
+    }
 }

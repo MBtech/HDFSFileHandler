@@ -84,7 +84,7 @@ public class HDFSHashManager implements FileManager {
     @Override
     public void writePiece(int piecePos, byte[] piece) {
         // This operation has to be deferred to the moment when hashes are matched
-        //pieceTracker.addPiece(piecePos); 
+        pieceTracker.addPiece(piecePos); 
         try {
             writePiece(piecePos, blockSize, piece);
         } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
@@ -149,15 +149,20 @@ public class HDFSHashManager implements FileManager {
         piecesMap.put(piecePos, piece);
         havePieces.set(piecePos);
         int ncpieces = havePieces.nextClearBit(0);
-
+        //If a previous piece arrive for rewrite
+        if(nPiecesWritten>piecePos){
+            nPiecesWritten=piecePos; 
+        } 
         System.out.println(objectType + "Number of pieces written " + nPiecesWritten);
         System.out.println(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
 
         System.out.println(objectType + "Writing piece number " + piecePos);
         file.writePiece(piecePos, piecesMap.get(piecePos));
-        pieceTracker.addPiece(piecePos);
+        //pieceTracker.addPiece(piecePos);
         //piecesMap.remove(piecePos);
+         
         nPiecesWritten++;
+        
 
     }
 
@@ -171,5 +176,5 @@ public class HDFSHashManager implements FileManager {
     public void close() throws IOException, NoSuchAlgorithmException, HashMismatchException {
 
     }
-
+   
 }
