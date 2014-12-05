@@ -18,8 +18,9 @@ public interface FileManager {
     public boolean isComplete();
     public Set<Integer> nextPiecesNeeded(int n, int startPos);
     public boolean hasPiece(int piecePos);
+    //Extra exceptions. Have to handle exceptions
     public byte[] readPiece(int piecePos);
     public void writePiece(int piecePos, byte[] piece);
     public int contiguousStart();
-    public void close() throws IOException, NoSuchAlgorithmException, HashMismatchException; //Extra function
+    public void close(); //Extra function
 }

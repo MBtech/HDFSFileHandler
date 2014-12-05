@@ -64,7 +64,7 @@ public class HDFSPieceTracker implements PieceTracker{
         //return (nextClear == 0 ? 0 : nextClear-1);
         return (nextClear == 0 ? 0 : nextClear); // changed value for my purpose
     } 
-
+    
     @Override
     public void clearPiece(int piecePos) {
         pieces.clear(piecePos);
