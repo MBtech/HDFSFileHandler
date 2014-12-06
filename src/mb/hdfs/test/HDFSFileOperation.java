@@ -11,6 +11,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+
 import mb.hdfs.aux.HashMismatchException;
 import mb.hdfs.aux.UnitConversion;
 import mb.hdfs.core.filemanager.FileManager;
@@ -22,6 +23,8 @@ import mb.hdfs.datagen.DataGen;
 
 import mb.hdfs.core.storage.HDFSStorageFactory;
 import mb.hdfs.core.storage.Storage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -30,7 +33,7 @@ import mb.hdfs.core.storage.Storage;
 public class HDFSFileOperation {
 
     private static MessageDigest md;
-
+    private static final Logger logger = LoggerFactory.getLogger(HDFSFileOperation.class);
     public static byte[] hash() {
         //md.update(readBlock); //use if hashing is on per block basis
         byte[] hashPiece = md.digest();
@@ -48,9 +51,9 @@ public class HDFSFileOperation {
      */
     public static void main(String[] args)
             throws NoSuchAlgorithmException, IOException, HashMismatchException {
-
         //Testing Operations of HDFSStorage
         //NOTE: The write operations need to be close before read can be done.
+        
         Storage hashStorage = HDFSStorageFactory.getExistingFile("MyTestHashFolder",
                 "MyTestFile", UnitConversion.mbToBytes(1), 64, null);
         PieceTracker hashPieceTracker = new HDFSPieceTracker(4);
@@ -82,7 +85,8 @@ public class HDFSFileOperation {
         for (Integer i : hashPieceSet) {
             hashFileManager.writePiece(i, hashPiece.get(i));
         }
-        System.out.println("Hashes written. Written data pieces now");
+        logger.info("Hashes written. Written data pieces now");
+        
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
@@ -92,20 +96,22 @@ public class HDFSFileOperation {
         for (Integer i : hashPieceSet) {
             hashFileManager.writePiece(i, hashPiece.get(0));
         }
-        System.out.println("Hashes written. Written data pieces now");
+        logger.info("Hashes written. Written data pieces now");
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
 
+        //Get rest of the pieces
         hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
         dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
+        
         while (!hashPieceSet.isEmpty()) {
             System.out.println(hashPieceSet);
             System.out.println(dataPieceSet);
             for (Integer i : hashPieceSet) {
                 hashFileManager.writePiece(i, hashPiece.get(i));
             }
-            System.out.println("Hashes written. Written data pieces now");
+            logger.info("Hashes written. Written data pieces now");
             dataPieceSet.stream().forEach((i) -> {
                 dataFileManager.writePiece(i, dataPiece.get(i));
             });
@@ -113,12 +119,12 @@ public class HDFSFileOperation {
             dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
         }
         //}
-        System.out.println("Calling close function");
+        logger.info("Calling close function");
         //PUT THE CLOSE COMMAND
         dataFileManager.close();
-        System.out.println("Start Reading");
+        logger.info("Start Reading");
         dataFileManager.readPiece(4);
-        System.out.println("Reading done");
+        logger.info("Reading done");
         /*
          //Sending out of order packets
          Set n = new LinkedHashSet();

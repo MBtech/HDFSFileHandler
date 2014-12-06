@@ -15,7 +15,7 @@ import java.security.NoSuchAlgorithmException;
 public interface Storage {
     
     public byte[] readPiece(int piecePos) throws IOException, NoSuchAlgorithmException;
-    
+    // public byte[] read(long offset, int length); Combine readPiece and readBlock into read
     public void writePiece(int piecePos, byte[] piece) throws IOException, NoSuchAlgorithmException;
     
     public byte [] readBlock(int blockPos) throws IOException; //Extra function

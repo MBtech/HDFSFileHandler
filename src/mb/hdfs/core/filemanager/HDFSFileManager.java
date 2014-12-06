@@ -12,11 +12,11 @@ import java.util.Arrays;
 import java.util.BitSet;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import mb.hdfs.aux.HashMismatchException;
 import mb.hdfs.core.storage.Storage;
 import mb.hdfs.core.piecetracker.PieceTracker;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -39,8 +39,8 @@ public class HDFSFileManager implements FileManager {
     private TreeMap<Integer, byte[]> pendingBlocks = new TreeMap<>();
     private TreeMap<Integer, byte[]> pendingBlockHash = new TreeMap<>();
     private String objectType;
-    private static final Logger logger = Logger.getLogger(HDFSFileManager.class.getName());
-    
+    private static final Logger logger = LoggerFactory.getLogger(HDFSFileManager.class);
+
     public HDFSFileManager(Storage file, PieceTracker pieces, String folderName, String fileName, int blockSize, int pieceSize, FileManager hashFileMngr, PieceTracker hashPieceTracker)
             throws IOException {
         this.file = file;
@@ -76,10 +76,8 @@ public class HDFSFileManager implements FileManager {
         return pieceTracker.hasPiece(piecePos);
     }
 
-    
-   
     @Override
-    public byte[] readPiece(int piecePos){
+    public byte[] readPiece(int piecePos) {
         //If the requested piece is the one that we  have already written
         if (nPiecesWritten >= piecePos) {
             try {
@@ -92,12 +90,12 @@ public class HDFSFileManager implements FileManager {
                 int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
                 int ppInBlock = piecePos % piecesPerBlock;
                 readBlock = file.readBlock(blockPos);
-                
-                logger.log(Level.INFO, "{0}No. of pieces Per block is {1}", new Object[]{objectType, piecesPerBlock});
-                logger.log(Level.INFO, "{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
-                logger.log(Level.INFO, "{0}Reading from index {1}", new Object[]{objectType, blockSize * blockPos});
-                logger.log(Level.INFO, "{0}Piece Size is {1} and start index is {2}", new Object[]{objectType, pieceSize, ppInBlock * pieceSize});
-                
+
+                logger.debug("{0}No. of pieces Per block is {1}", new Object[]{objectType, piecesPerBlock});
+                logger.debug("{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
+                logger.debug("{0}Reading from index {1}", new Object[]{objectType, blockSize * blockPos});
+                logger.debug("{0}Piece Size is {1} and start index is {2}", new Object[]{objectType, pieceSize, ppInBlock * pieceSize});
+
                 //Get the piece of interest from the block of interest
                 System.arraycopy(readBlock, ppInBlock * pieceSize, readPiece, 0, pieceSize);
                 //Calulate hash of whole block
@@ -105,44 +103,44 @@ public class HDFSFileManager implements FileManager {
                 md.update(readBlock);
                 readHashByte = md.digest();
                 hashByte = hashFileManager.readPiece(blockPos);
-                
+
                 if (Arrays.equals(toByteString(readHashByte), hashByte)) {
-                    System.out.println("Match Successful");
+                    logger.info("Match Successful");
                     return readPiece;
                 } else {
-                    System.out.write(hashByte);
-                    System.out.println();
-                    System.out.write(toByteString(readHashByte));
+                    logger.error("The hash of the data block is: ", hashByte);
+                    logger.error("The hash of the block received from hash manager is ", toByteString(readHashByte));
                     throw new HashMismatchException("The hash results do no match");
+                    //Handle the exception here as well. Or should we?
                 }
             } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
-                Logger.getLogger(HDFSFileManager.class.getName()).log(Level.SEVERE, null, ex);
+                logger.error("Exception occurred", ex);
             }
         }
         return null; //Should return an exception
     }
 
     @Override
-    public void writePiece(int piecePos, byte[] piece){
+    public void writePiece(int piecePos, byte[] piece) {
         pieceTracker.addPiece(piecePos);
         byte[] hashPiece = null;
         piecesMap.put(piecePos, piece);
         havePieces.set(piecePos);
         int ncpieces = havePieces.nextClearBit(0);
 
-        System.out.println(objectType + "Number of pieces written " + nPiecesWritten);
-        System.out.println(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
+        logger.debug(objectType + "Number of pieces written " + nPiecesWritten);
+        logger.debug(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
         nPiecesWritten = currentBlockNumber * piecesPerBlock;
         if (ncpieces - nPiecesWritten == piecesPerBlock) {
 
             try {
-                System.out.println(objectType + "Calculating hashes for contiguous pieces");
+                logger.info(objectType + "Calculating hashes for contiguous pieces");
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
                 for (int i = nPiecesWritten; i < ncpieces; i++) {
                     //System.out.println("Writing piece number " + i);
                     md.update(piecesMap.get(i));
                 }
-                
+
                 byte[] hashCal = md.digest();
                 int blockNumber = (int) piecePos / piecesPerBlock;
                 for (int i = nPiecesWritten; i < ncpieces; i++) {
@@ -154,7 +152,7 @@ public class HDFSFileManager implements FileManager {
                 }
                 currentBlockNumber++;
             } catch (NoSuchAlgorithmException ex) {
-                Logger.getLogger(HDFSFileManager.class.getName()).log(Level.SEVERE, null, ex);
+                logger.error("Exception occurred", ex);
             }
         }
         int hashBlkAvail = hashFileManager.contiguousStart() - blocksWritten;
@@ -165,18 +163,18 @@ public class HDFSFileManager implements FileManager {
                 hashPiece = hashFileManager.readPiece(blocksWritten);
                 hashCal = pendingBlockHash.get(blocksWritten);
                 if (Arrays.equals(toByteString(hashCal), hashPiece)) {
-                    System.out.println(objectType + "Match Successful: Data received is correct");
-                    System.out.println(objectType + "Writing contiguous pieces to hdfs");
+                    logger.info(objectType + "Match Successful: Data received is correct");
+                    logger.info(objectType + "Writing contiguous pieces to hdfs");
                     for (int j = 0; j < piecesPerBlock; j++) {
                         try {
-                            System.out.println(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
+                            logger.debug(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
                             file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                             //pieceTracker.addPiece(blocksWritten * piecesPerBlock + j);
                         } catch (IOException | NoSuchAlgorithmException ex) {
-                            Logger.getLogger(HDFSFileManager.class.getName()).log(Level.SEVERE, null, ex);
+                            logger.error("Exception occurred", ex);
                         }
                     }
-                    System.out.println("Removing pending hash blocks");
+                    logger.info("Removing pending hash blocks");
                     pendingBlockHash.remove(blocksWritten);
                     for (int j = 0; j < piecesPerBlock; j++) {
                         pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
@@ -197,8 +195,8 @@ public class HDFSFileManager implements FileManager {
                         havePieces.clear(blocksWritten * piecesPerBlock + j);
                     }
                     currentBlockNumber--;
-                    
-                    System.out.println("WARN: Hash Mismatch!!");
+
+                    logger.error("WARN: Hash Mismatch!!");
                     //throw new HashMismatchException("The hash results do no match");
                     break;
                 }
@@ -223,14 +221,14 @@ public class HDFSFileManager implements FileManager {
         byte[] hashPiece;
         byte[] hashCal;
         int npending = pendingBlockHash.size();
-       
+
         for (int i = 0; i < npending; i++) {
             try {
                 hashPiece = hashFileManager.readPiece(blocksWritten);
                 hashCal = pendingBlockHash.get(blocksWritten);
                 if (Arrays.equals(toByteString(hashCal), hashPiece)) {
                     for (int j = 0; j < piecesPerBlock; j++) {
-                        System.out.println(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
+                        logger.debug(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
                         file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                         pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
                     }
@@ -241,7 +239,7 @@ public class HDFSFileManager implements FileManager {
                     throw new HashMismatchException("The hash results do no match");
                 }
             } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
-                Logger.getLogger(HDFSFileManager.class.getName()).log(Level.SEVERE, null, ex);
+                logger.error("Exception occurred", ex);
             }
         }
     }

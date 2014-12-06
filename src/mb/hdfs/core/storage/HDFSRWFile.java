@@ -15,6 +15,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * PieceOps class allows to read and write pieces in HDFS It accumulates the
@@ -31,7 +33,7 @@ public class HDFSRWFile implements Storage {
     private FSDataOutputStream fdos;
     private final FileSystem hdfs;
     private final Path P;
-
+    private static final Logger logger = LoggerFactory.getLogger(HDFSRWFile.class);
     public HDFSRWFile(String folderName, String fileName, int blockSize, int pieceSize, FileManager hashFileMngr)
             throws IOException {
         this.fileName = fileName;
@@ -66,29 +68,13 @@ public class HDFSRWFile implements Storage {
         Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
         FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
         byte[] readBlock = new byte[blockSize];
-        System.out.println(fdis.available());
         FileStatus fs = hdfs.getFileStatus(filePath);
-        System.out.println("Size of file " + fs.getLen());
+        logger.debug("Size of file" + fs.getLen());
         //System.out.println(blockSize);
-        System.out.println("FileName " + fileName + " and FolderName " + folderName);
-        System.out.println("Reading from " + (blockSize * blockPos) + " to " + (blockSize * blockPos + blockSize));
+        logger.debug("FileName " + fileName + " and FolderName " + folderName);
+        logger.debug("Reading from " + (blockSize * blockPos) + " to " + (blockSize * blockPos + blockSize));
         fdis.readFully(blockSize * blockPos, readBlock, 0, blockSize);
         fdis.close();
-        /**
-        int current = 0;
-        int left = blockSize;
-        while (left > 0) {
-            int n = fdis.read(blockSize * blockPos, readBlock, current, left);
-            left = left - n;
-            current = current + n;
-            System.out.println(n);
-            try { 
-                Thread.sleep(1000);
-            } catch (InterruptedException ex) {
-                Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
-            }
-        }
-        * **/
         return readBlock;
     }
 

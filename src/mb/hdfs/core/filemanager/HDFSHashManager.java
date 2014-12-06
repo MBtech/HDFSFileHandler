@@ -10,10 +10,10 @@ import java.security.NoSuchAlgorithmException;
 import java.util.BitSet;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import mb.hdfs.core.piecetracker.PieceTracker;
 import mb.hdfs.core.storage.Storage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -34,7 +34,7 @@ public class HDFSHashManager implements FileManager {
     private TreeMap<Integer, byte[]> pendingBlocks = new TreeMap<>();
     private TreeMap<Integer, byte[]> pendingBlockHash = new TreeMap<>();
     private String objectType;
-    private static final Logger logger = Logger.getLogger(HDFSHashManager.class.getName());
+    private static final Logger logger = LoggerFactory.getLogger(HDFSHashManager.class);
 
     public HDFSHashManager(Storage file, PieceTracker pieces, String folderName, String fileName, int blockSize, int pieceSize)
             throws IOException {
@@ -76,29 +76,29 @@ public class HDFSHashManager implements FileManager {
             byte[] readPiece = new byte[this.pieceSize];
             //Blocks to be discarded
             int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
-            logger.log(Level.INFO, "{0}No. of pieces Per block is {1}", new Object[]{objectType, piecesPerBlock});
-            logger.log(Level.INFO, "{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
-
+            logger.debug("{0}No. of pieces Per block is {1}", new Object[]{objectType, piecesPerBlock});
+            logger.debug("{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
+            
             if (piecesMap.containsKey(piecePos)) {
-                logger.log(Level.INFO, "{0}The piece is in the pending queue", objectType);
+                logger.info("{0}The piece is in the pending queue", objectType);
                 readPiece = piecesMap.get(piecePos);
             } else {
                 try {
-                    System.out.println(objectType + "Reading from index " + pieceSize * piecePos);
-                    System.out.println(objectType + "Number of bytes to read " + pieceSize);
+                    logger.debug(objectType + "Reading from index " + pieceSize * piecePos);
+                    logger.debug(objectType + "Number of bytes to read " + pieceSize);
                     readPiece = file.readPiece(piecePos);
                 } catch (IOException | NoSuchAlgorithmException ex) {
-                    Logger.getLogger(HDFSHashManager.class.getName()).log(Level.SEVERE, null, ex);
+                    logger.error("Exception occurred", ex);
                 }
             }
 
-            System.out.println("Returning read piece");
+            logger.info("Returning read piece");
             return readPiece;
 
         }
         return null; //Should return an exception
     }
-
+    // Don't write the pieces until it's confirmed!!!!!
     @Override
     public void writePiece(int piecePos, byte[] piece) {
         try {
@@ -111,17 +111,17 @@ public class HDFSHashManager implements FileManager {
             if(nPiecesWritten>piecePos){
                 nPiecesWritten=piecePos;
             }
-            System.out.println(objectType + "Number of pieces written " + nPiecesWritten);
-            System.out.println(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
+            logger.debug(objectType + "Number of pieces written " + nPiecesWritten);
+            logger.debug(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
             
-            System.out.println(objectType + "Writing piece number " + piecePos);
+            logger.debug(objectType + "Writing piece number " + piecePos);
             file.writePiece(piecePos, piecesMap.get(piecePos));
             //pieceTracker.addPiece(piecePos);
             //piecesMap.remove(piecePos);
 
             nPiecesWritten++;
         } catch (IOException | NoSuchAlgorithmException ex) {
-            Logger.getLogger(HDFSHashManager.class.getName()).log(Level.SEVERE, null, ex);
+            logger.error("Exception occurred", ex);
         }
     }
 
