@@ -10,6 +10,7 @@ import java.security.NoSuchAlgorithmException;
 import java.util.BitSet;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.logging.Level;
 import mb.hdfs.core.piecetracker.PieceTracker;
 import mb.hdfs.core.storage.Storage;
 import org.slf4j.Logger;
@@ -20,7 +21,7 @@ import org.slf4j.LoggerFactory;
  * @author Muhammad Bilal <mubil@kth.se>
  */
 public class HDFSHashManager implements FileManager {
-
+    
     private final Storage file;
     private final PieceTracker pieceTracker;
     private final int blockSize;
@@ -32,9 +33,9 @@ public class HDFSHashManager implements FileManager {
     private int nPiecesWritten;
     private int blocksWritten;
     private TreeMap<Integer, byte[]> pendingBlocks = new TreeMap<>();
-    private TreeMap<Integer, byte[]> pendingBlockHash = new TreeMap<>();
     private String objectType;
     private static final Logger logger = LoggerFactory.getLogger(HDFSHashManager.class);
+    private BitSet verified;
 
     public HDFSHashManager(Storage file, PieceTracker pieces, String folderName, String fileName, int blockSize, int pieceSize)
             throws IOException {
@@ -78,7 +79,7 @@ public class HDFSHashManager implements FileManager {
             int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
             logger.debug("{0}No. of pieces Per block is {1}", new Object[]{objectType, piecesPerBlock});
             logger.debug("{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
-            
+
             if (piecesMap.containsKey(piecePos)) {
                 logger.info("{0}The piece is in the pending queue", objectType);
                 readPiece = piecesMap.get(piecePos);
@@ -98,30 +99,39 @@ public class HDFSHashManager implements FileManager {
         }
         return null; //Should return an exception
     }
-    // Don't write the pieces until it's confirmed!!!!!
+
     @Override
     public void writePiece(int piecePos, byte[] piece) {
-        try {
-            // This operation has to be deferred to the moment when hashes are matched
-            pieceTracker.addPiece(piecePos);
-            piecesMap.put(piecePos, piece);
-            havePieces.set(piecePos);
-            int ncpieces = havePieces.nextClearBit(0);
-            //If a previous piece arrive for rewrite
-            if(nPiecesWritten>piecePos){
-                nPiecesWritten=piecePos;
+        pieceTracker.addPiece(piecePos);
+        byte[] hashPiece = null;
+        piecesMap.put(piecePos, piece);
+        havePieces.set(piecePos);
+        int ncpieces = havePieces.nextClearBit(0);
+        //Check the following line of code 
+        if(nPiecesWritten>piecePos){ nPiecesWritten=piecePos; }
+        logger.debug(objectType + "Number of pieces written " + nPiecesWritten);
+        logger.debug(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
+        nPiecesWritten = currentBlockNumber * piecesPerBlock;
+        if (ncpieces - nPiecesWritten == piecesPerBlock) {
+            for (int i = nPiecesWritten; i < ncpieces; i++) {
+                pendingBlocks.put(i, piecesMap.get(i));
             }
-            logger.debug(objectType + "Number of pieces written " + nPiecesWritten);
-            logger.debug(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
-            
-            logger.debug(objectType + "Writing piece number " + piecePos);
-            file.writePiece(piecePos, piecesMap.get(piecePos));
-            //pieceTracker.addPiece(piecePos);
-            //piecesMap.remove(piecePos);
+            for (int j = nPiecesWritten; j < ncpieces; j++) {
+                piecesMap.remove(j);
+            }
+            currentBlockNumber++;
 
-            nPiecesWritten++;
-        } catch (IOException | NoSuchAlgorithmException ex) {
-            logger.error("Exception occurred", ex);
+        }
+        //Check for the pending blocks that are also verified and write them to HDFS
+        for(Integer i:pendingBlocks.keySet()){
+            if(verified.get(i)){
+                try {
+                    file.writePiece(i, pendingBlocks.get(i));
+                } catch (IOException | NoSuchAlgorithmException ex) {
+                    java.util.logging.Logger.getLogger(HDFSHashManager.class.getName()).log(Level.SEVERE, null, ex);
+                }
+                pendingBlocks.remove(i);
+            }
         }
     }
 
@@ -135,10 +145,9 @@ public class HDFSHashManager implements FileManager {
         return file.toString();
     }
 
-    // Not needed in this case as the pieces are written to HDFS as soon as they arrive
     @Override
-    public void close(){
-
+    public void verifiedPiece(int piecePos) {
+        verified.set(piecePos);
     }
-   
+
 }

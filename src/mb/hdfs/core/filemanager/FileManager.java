@@ -18,6 +18,5 @@ public interface FileManager {
     public byte[] readPiece(int piecePos);
     public void writePiece(int piecePos, byte[] piece);
     public int contiguousStart();
-    public void close(); //Extra function Remove this function.
-    // Shift the functionality to isComplete()
+    public void verifiedPiece(int peicePos); //Extra function
 }

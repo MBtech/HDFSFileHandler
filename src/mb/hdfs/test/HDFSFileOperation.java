@@ -104,10 +104,11 @@ public class HDFSFileOperation {
         //Get rest of the pieces
         hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
         dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
-        
-        while (!hashPieceSet.isEmpty()) {
-            System.out.println(hashPieceSet);
-            System.out.println(dataPieceSet);
+        //Since the check is on both. Make sure that if one is complete but the other isn't
+        //the program doesn't get messed up
+        while (!hashFileManager.isComplete() && !dataFileManager.isComplete()) {
+            //System.out.println(hashPieceSet);
+            //System.out.println(dataPieceSet);
             for (Integer i : hashPieceSet) {
                 hashFileManager.writePiece(i, hashPiece.get(i));
             }
@@ -118,10 +119,9 @@ public class HDFSFileOperation {
             hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
             dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
         }
-        //}
+
         logger.info("Calling close function");
-        //PUT THE CLOSE COMMAND
-        dataFileManager.close();
+ 
         logger.info("Start Reading");
         dataFileManager.readPiece(4);
         logger.info("Reading done");

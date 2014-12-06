@@ -63,6 +63,33 @@ public class HDFSFileManager implements FileManager {
 
     @Override
     public boolean isComplete() {
+        
+        //Write the pending pieces
+        byte[] hashPiece;
+        byte[] hashCal;
+        int npending = pendingBlockHash.size();
+
+        for (int i = 0; i < npending; i++) {
+            try {
+                hashPiece = hashFileManager.readPiece(blocksWritten);
+                hashCal = pendingBlockHash.get(blocksWritten);
+                if (Arrays.equals(toByteString(hashCal), hashPiece)) {
+                    for (int j = 0; j < piecesPerBlock; j++) {
+                        int index = blocksWritten * piecesPerBlock + j;
+                        logger.debug(objectType + "Writing piece number " + index);
+                        file.writePiece(index, pendingBlocks.get(index));
+                        pendingBlocks.remove(index);
+                    }
+                    pendingBlockHash.remove(blocksWritten);
+                    blocksWritten++;
+                } else {
+                    //Change this exception
+                    throw new HashMismatchException("The hash results do no match");
+                }
+            } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
+                logger.error("Exception occurred", ex);
+            }
+        }
         return pieceTracker.isComplete();
     }
 
@@ -90,7 +117,7 @@ public class HDFSFileManager implements FileManager {
                 int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
                 int ppInBlock = piecePos % piecesPerBlock;
                 readBlock = file.readBlock(blockPos);
-
+                //Debugging logs
                 logger.debug("{0}No. of pieces Per block is {1}", new Object[]{objectType, piecesPerBlock});
                 logger.debug("{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
                 logger.debug("{0}Reading from index {1}", new Object[]{objectType, blockSize * blockPos});
@@ -103,7 +130,7 @@ public class HDFSFileManager implements FileManager {
                 md.update(readBlock);
                 readHashByte = md.digest();
                 hashByte = hashFileManager.readPiece(blockPos);
-
+                //Compare hashes
                 if (Arrays.equals(toByteString(readHashByte), hashByte)) {
                     logger.info("Match Successful");
                     return readPiece;
@@ -174,10 +201,12 @@ public class HDFSFileManager implements FileManager {
                             logger.error("Exception occurred", ex);
                         }
                     }
+                    
                     logger.info("Removing pending hash blocks");
                     pendingBlockHash.remove(blocksWritten);
                     for (int j = 0; j < piecesPerBlock; j++) {
                         pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
+                        hashFileManager.verifiedPiece(blocksWritten * piecesPerBlock + j);
                     }
                     //Delete the pieces written to keep the size of pieceMap small      
                     blocksWritten++;
@@ -216,33 +245,6 @@ public class HDFSFileManager implements FileManager {
         return file.toString();
     }
 
-    @Override
-    public void close() {
-        byte[] hashPiece;
-        byte[] hashCal;
-        int npending = pendingBlockHash.size();
-
-        for (int i = 0; i < npending; i++) {
-            try {
-                hashPiece = hashFileManager.readPiece(blocksWritten);
-                hashCal = pendingBlockHash.get(blocksWritten);
-                if (Arrays.equals(toByteString(hashCal), hashPiece)) {
-                    for (int j = 0; j < piecesPerBlock; j++) {
-                        logger.debug(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
-                        file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
-                        pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
-                    }
-                    pendingBlockHash.remove(blocksWritten);
-                    blocksWritten++;
-                } else {
-                    //Change this exception
-                    throw new HashMismatchException("The hash results do no match");
-                }
-            } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
-                logger.error("Exception occurred", ex);
-            }
-        }
-    }
 
     private byte[] toByteString(byte[] hash) {
         StringBuilder sb = new StringBuilder();
@@ -251,5 +253,10 @@ public class HDFSFileManager implements FileManager {
         }
         //System.out.println("Hash of written data: " + sb.toString());
         return sb.toString().getBytes();
+    }
+
+    @Override
+    public void verifiedPiece(int peicePos) {
+        throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
     }
 }
