@@ -41,6 +41,7 @@ public class HDFSFileOperation {
         for (int i = 0; i < hashPiece.length; i++) {
             sb.append(Integer.toString((hashPiece[i] & 0xff) + 0x100, 16).substring(1));
         }
+        System.out.println(sb.toString());
         return sb.toString().getBytes();
     }
 
@@ -50,7 +51,7 @@ public class HDFSFileOperation {
      * @throws java.io.IOException
      */
     public static void main(String[] args)
-            throws NoSuchAlgorithmException, IOException, HashMismatchException {
+            throws NoSuchAlgorithmException, IOException, HashMismatchException, InterruptedException {
         //Testing Operations of HDFSStorage
         //NOTE: The write operations need to be close before read can be done.
         
@@ -75,11 +76,14 @@ public class HDFSFileOperation {
 
                 md.update(dataPiece.get(j * 4 + i));
             }
-            hashPiece.add(j, hash());
+            hashPiece.add(j, hash()); 
         }
         Set<Integer> hashPieceSet;
         Set<Integer> dataPieceSet;
-        //for (int j = 0; j < 4; j++) {
+        //If pieces requested at any time are not equal to block size. The problem will arise
+        //when hashes don't match and suppose only one block is missing in the middle of blocks
+        // that have been received and verified. When next contiguous pieces are asked again
+        // otherwise extra data might be downloaded and appended which would mess everthing up
         hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
         dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
         for (Integer i : hashPieceSet) {
@@ -90,7 +94,10 @@ public class HDFSFileOperation {
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
-
+        
+        dataFileManager.isComplete();
+        hashFileManager.isComplete();
+        
         hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
         dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
         for (Integer i : hashPieceSet) {
@@ -100,7 +107,8 @@ public class HDFSFileOperation {
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
-
+        dataFileManager.isComplete();
+        hashFileManager.isComplete();
         //Get rest of the pieces
         hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
         dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
@@ -112,12 +120,13 @@ public class HDFSFileOperation {
             for (Integer i : hashPieceSet) {
                 hashFileManager.writePiece(i, hashPiece.get(i));
             }
-            logger.info("Hashes written. Written data pieces now");
+            logger.info("Hashes written. Written data pieces now: In loop");
             dataPieceSet.stream().forEach((i) -> {
                 dataFileManager.writePiece(i, dataPiece.get(i));
             });
             hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
             dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
+            Thread.sleep(1000);
         }
 
         logger.info("Calling close function");

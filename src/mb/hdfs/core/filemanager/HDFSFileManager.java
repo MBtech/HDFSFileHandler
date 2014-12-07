@@ -15,6 +15,7 @@ import java.util.TreeMap;
 import mb.hdfs.aux.HashMismatchException;
 import mb.hdfs.core.storage.Storage;
 import mb.hdfs.core.piecetracker.PieceTracker;
+import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,7 +55,6 @@ public class HDFSFileManager implements FileManager {
         nPiecesWritten = 0;
         blocksWritten = 0;
         this.objectType = "Data Manager: ";
-
         hashFileManager = hashFileMngr;
         if (blockSize % pieceSize != 0) {
             throw new IllegalArgumentException("Illegal pieceSize: Size should be multiple of blockSize");
@@ -63,31 +63,65 @@ public class HDFSFileManager implements FileManager {
 
     @Override
     public boolean isComplete() {
-        
-        //Write the pending pieces
         byte[] hashPiece;
-        byte[] hashCal;
-        int npending = pendingBlockHash.size();
-
-        for (int i = 0; i < npending; i++) {
-            try {
+        int hashBlkAvail = hashFileManager.contiguousStart() - blocksWritten;
+        //Iterate over all the pending blocks whose hashes we have
+        for (int i = 0; i < hashBlkAvail; i++) {
+            byte[] hashCal;
+            if (pendingBlockHash.containsKey(blocksWritten)) {
+                logger.info("Asking for hash piece number " + blocksWritten);
                 hashPiece = hashFileManager.readPiece(blocksWritten);
                 hashCal = pendingBlockHash.get(blocksWritten);
                 if (Arrays.equals(toByteString(hashCal), hashPiece)) {
+                    logger.info(objectType + "Match Successful: Data received is correct");
+                    logger.info(objectType + "Writing contiguous pieces to hdfs");
                     for (int j = 0; j < piecesPerBlock; j++) {
-                        int index = blocksWritten * piecesPerBlock + j;
-                        logger.debug(objectType + "Writing piece number " + index);
-                        file.writePiece(index, pendingBlocks.get(index));
-                        pendingBlocks.remove(index);
+                        try {
+                            logger.info(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
+                            file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
+                            //pieceTracker.addPiece(blocksWritten * piecesPerBlock + j);
+                        } catch (IOException | NoSuchAlgorithmException ex) {
+                            logger.error("Exception occurred", ex);
+                        }
                     }
+                    
+                    logger.info("Removing pending blocks");
                     pendingBlockHash.remove(blocksWritten);
+                    hashFileManager.verifiedPiece(blocksWritten);
+                    for (int j = 0; j < piecesPerBlock; j++) {
+                        pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
+                        
+                    }
+                    //Delete the pieces written to keep the size of pieceMap small      
                     blocksWritten++;
+
                 } else {
-                    //Change this exception
-                    throw new HashMismatchException("The hash results do no match");
+                    // Hash match failed
+                    // Remove the hash and data from the pending lists 
+                    // Clear the bits in pieceTracker to show the need of getting this data again
+                    // removal is not necessary as the latest value will override the older value
+                    pendingBlockHash.remove(blocksWritten);
+                    hashPieceTracker.clearPiece(blocksWritten);
+                    for (int j = 0; j < piecesPerBlock; j++) {
+                        pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
+                        pieceTracker.clearPiece(blocksWritten * piecesPerBlock + j);
+                        havePieces.clear(blocksWritten * piecesPerBlock + j);
+                    }
+                    currentBlockNumber--;
+                    try{
+                    System.out.write(toByteString(hashCal));
+                    System.out.println("");
+                    System.out.write(hashPiece);
+                    }
+                    catch(IOException ex) {
+                            logger.error("Exception occurred", ex);
+                    }
+                    logger.error("WARN: Hash Mismatch!!");
+                    //throw new HashMismatchException("The hash results do no match");
+                    break;
                 }
-            } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
-                logger.error("Exception occurred", ex);
+            } else {
+                break;
             }
         }
         return pieceTracker.isComplete();
@@ -154,10 +188,11 @@ public class HDFSFileManager implements FileManager {
         piecesMap.put(piecePos, piece);
         havePieces.set(piecePos);
         int ncpieces = havePieces.nextClearBit(0);
-
-        logger.debug(objectType + "Number of pieces written " + nPiecesWritten);
-        logger.debug(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
         nPiecesWritten = currentBlockNumber * piecesPerBlock;
+        logger.info(objectType + "Piece number received " + piecePos);
+        logger.info(objectType + "Number of pieces written " + nPiecesWritten);
+        logger.info(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
+        
         if (ncpieces - nPiecesWritten == piecesPerBlock) {
 
             try {
@@ -180,57 +215,6 @@ public class HDFSFileManager implements FileManager {
                 currentBlockNumber++;
             } catch (NoSuchAlgorithmException ex) {
                 logger.error("Exception occurred", ex);
-            }
-        }
-        int hashBlkAvail = hashFileManager.contiguousStart() - blocksWritten;
-        //Iterate over all the pending blocks whose hashes we have
-        for (int i = 0; i < hashBlkAvail; i++) {
-            byte[] hashCal;
-            if (pendingBlockHash.containsKey(blocksWritten)) {
-                hashPiece = hashFileManager.readPiece(blocksWritten);
-                hashCal = pendingBlockHash.get(blocksWritten);
-                if (Arrays.equals(toByteString(hashCal), hashPiece)) {
-                    logger.info(objectType + "Match Successful: Data received is correct");
-                    logger.info(objectType + "Writing contiguous pieces to hdfs");
-                    for (int j = 0; j < piecesPerBlock; j++) {
-                        try {
-                            logger.debug(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
-                            file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
-                            //pieceTracker.addPiece(blocksWritten * piecesPerBlock + j);
-                        } catch (IOException | NoSuchAlgorithmException ex) {
-                            logger.error("Exception occurred", ex);
-                        }
-                    }
-                    
-                    logger.info("Removing pending hash blocks");
-                    pendingBlockHash.remove(blocksWritten);
-                    for (int j = 0; j < piecesPerBlock; j++) {
-                        pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
-                        hashFileManager.verifiedPiece(blocksWritten * piecesPerBlock + j);
-                    }
-                    //Delete the pieces written to keep the size of pieceMap small      
-                    blocksWritten++;
-
-                } else {
-                    // Hash match failed
-                    // Remove the hash and data from the pending lists 
-                    // Clear the bits in pieceTracker to show the need of getting this data again
-                    // removal is not necessary as the latest value will override the older value
-                    pendingBlockHash.remove(blocksWritten);
-                    hashPieceTracker.clearPiece(blocksWritten);
-                    for (int j = 0; j < piecesPerBlock; j++) {
-                        pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
-                        pieceTracker.clearPiece(blocksWritten * piecesPerBlock + j);
-                        havePieces.clear(blocksWritten * piecesPerBlock + j);
-                    }
-                    currentBlockNumber--;
-
-                    logger.error("WARN: Hash Mismatch!!");
-                    //throw new HashMismatchException("The hash results do no match");
-                    break;
-                }
-            } else {
-                break;
             }
         }
     }
