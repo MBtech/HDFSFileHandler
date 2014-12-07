@@ -65,7 +65,7 @@ public class HDFSHashManager implements FileManager {
             System.out.println(verified);
             if (verified.contains((int)e.getKey())) {
                 try {
-                    System.out.println("writing piece number "+ e.getKey() + " to disk");
+                    logger.info("writing piece number "+ e.getKey() + " to disk");
                     file.writePiece((int) e.getKey(), (byte[]) e.getValue());
                     entries.remove();
                 } catch (IOException | NoSuchAlgorithmException ex) {
@@ -128,15 +128,7 @@ public class HDFSHashManager implements FileManager {
         logger.info(objectType + "Piece number of received data " + piecePos);
         logger.info(objectType + "Number of pieces written " + nPiecesWritten);
         logger.info(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
-        
-        /**
-         * if (ncpieces - nPiecesWritten == piecesPerBlock) { for (int i =
-         * nPiecesWritten; i < ncpieces; i++) { pendingBlocks.put(i,
-         * piecesMap.get(i)); } for (int j = nPiecesWritten; j < ncpieces; j++)
-         * { piecesMap.remove(j); } currentBlockNumber++;
-         *
-         * }*
-         */
+
         //Check for the pending blocks that are also verified and write them to HDFS
         Iterator entries = piecesMap.entrySet().iterator();
         while (entries.hasNext()) {

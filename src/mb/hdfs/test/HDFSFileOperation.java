@@ -34,6 +34,7 @@ public class HDFSFileOperation {
 
     private static MessageDigest md;
     private static final Logger logger = LoggerFactory.getLogger(HDFSFileOperation.class);
+
     public static byte[] hash() {
         //md.update(readBlock); //use if hashing is on per block basis
         byte[] hashPiece = md.digest();
@@ -54,7 +55,7 @@ public class HDFSFileOperation {
             throws NoSuchAlgorithmException, IOException, HashMismatchException, InterruptedException {
         //Testing Operations of HDFSStorage
         //NOTE: The write operations need to be close before read can be done.
-        
+
         Storage hashStorage = HDFSStorageFactory.getExistingFile("MyTestHashFolder",
                 "MyTestFile", UnitConversion.mbToBytes(1), 64, null);
         PieceTracker hashPieceTracker = new HDFSPieceTracker(4);
@@ -76,7 +77,7 @@ public class HDFSFileOperation {
 
                 md.update(dataPiece.get(j * 4 + i));
             }
-            hashPiece.add(j, hash()); 
+            hashPiece.add(j, hash());
         }
         Set<Integer> hashPieceSet;
         Set<Integer> dataPieceSet;
@@ -90,14 +91,14 @@ public class HDFSFileOperation {
             hashFileManager.writePiece(i, hashPiece.get(i));
         }
         logger.info("Hashes written. Written data pieces now");
-        
+
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
-        
+
         dataFileManager.isComplete();
         hashFileManager.isComplete();
-        
+
         hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
         dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
         for (Integer i : hashPieceSet) {
@@ -107,30 +108,30 @@ public class HDFSFileOperation {
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
-        dataFileManager.isComplete();
-        hashFileManager.isComplete();
-        //Get rest of the pieces
-        hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
-        dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
-        //Since the check is on both. Make sure that if one is complete but the other isn't
-        //the program doesn't get messed up
+
         while (!hashFileManager.isComplete() && !dataFileManager.isComplete()) {
             //System.out.println(hashPieceSet);
             //System.out.println(dataPieceSet);
-            for (Integer i : hashPieceSet) {
-                hashFileManager.writePiece(i, hashPiece.get(i));
-            }
-            logger.info("Hashes written. Written data pieces now: In loop");
-            dataPieceSet.stream().forEach((i) -> {
-                dataFileManager.writePiece(i, dataPiece.get(i));
-            });
             hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
             dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
+            if (!hashPieceSet.isEmpty()) {
+                for (Integer i : hashPieceSet) {
+                    hashFileManager.writePiece(i, hashPiece.get(i));
+                }
+            }
+            logger.info("Hashes written. Written data pieces now: In loop");
+            if (!dataPieceSet.isEmpty()) {
+                dataPieceSet.stream().forEach((i) -> {
+                    dataFileManager.writePiece(i, dataPiece.get(i));
+                });
+            }
             Thread.sleep(1000);
+            dataFileManager.isComplete();
+            hashFileManager.isComplete();
         }
-
+        
         logger.info("Calling close function");
- 
+
         logger.info("Start Reading");
         dataFileManager.readPiece(4);
         logger.info("Reading done");

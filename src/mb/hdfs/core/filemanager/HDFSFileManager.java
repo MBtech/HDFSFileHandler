@@ -63,6 +63,7 @@ public class HDFSFileManager implements FileManager {
 
     @Override
     public boolean isComplete() {
+        System.out.println("Is complete function called!");
         byte[] hashPiece;
         int hashBlkAvail = hashFileManager.contiguousStart() - blocksWritten;
         //Iterate over all the pending blocks whose hashes we have
@@ -96,10 +97,7 @@ public class HDFSFileManager implements FileManager {
                     blocksWritten++;
 
                 } else {
-                    // Hash match failed
-                    // Remove the hash and data from the pending lists 
-                    // Clear the bits in pieceTracker to show the need of getting this data again
-                    // removal is not necessary as the latest value will override the older value
+                    // Hash match failed. Discard pieces from queues
                     pendingBlockHash.remove(blocksWritten);
                     hashPieceTracker.clearPiece(blocksWritten);
                     for (int j = 0; j < piecesPerBlock; j++) {
