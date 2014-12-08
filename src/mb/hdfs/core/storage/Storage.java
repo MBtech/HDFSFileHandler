@@ -12,7 +12,6 @@ package mb.hdfs.core.storage;
 public interface Storage {
     
     public byte[] readPiece(int piecePos);
-    public byte [] readBlock(int blockPos);
     public byte[] read(long offset, int length); //Combine readPiece and readBlock into read
     //The problem here is that the length might be smaller than the block size
     public void writePiece(int piecePos, byte[] piece);

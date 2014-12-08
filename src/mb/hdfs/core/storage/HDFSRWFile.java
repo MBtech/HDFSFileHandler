@@ -70,29 +70,6 @@ public class HDFSRWFile implements Storage {
     }
 
     @Override
-    public byte[] readBlock(int blockPos) {
-        FSDataInputStream fdis = null;
-        try {
-            Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
-            fdis = new FSDataInputStream(hdfs.open(filePath));
-            byte[] readBlock = new byte[blockSize];
-            FileStatus fs = hdfs.getFileStatus(filePath);
-            logger.debug("Size of file" + fs.getLen());
-            //System.out.println(blockSize);
-            logger.debug("FileName " + fileName + " and FolderName " + folderName);
-            logger.debug("Reading from " + (blockSize * blockPos) + " to " + (blockSize * blockPos + blockSize));
-            fdis.readFully(blockSize * blockPos, readBlock, 0, blockSize);
-            fdis.close();
-            return readBlock;
-        } catch (IOException ex) {
-            java.util.logging.Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
-        } 
-        return null; // handle null
-    }
-
-    // TODO change the blockSize type to long instead of int 
-
-    @Override
     public void writePiece(int piecePos, byte[] piece){
         try {
             fdos = hdfs.append(P);

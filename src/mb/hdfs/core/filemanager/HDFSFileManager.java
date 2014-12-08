@@ -79,13 +79,13 @@ public class HDFSFileManager implements FileManager {
                         logger.info(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
                         file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                     }
-                    
+
                     logger.info("Removing pending blocks");
                     pendingBlockHash.remove(blocksWritten);
                     hashFileManager.verifiedPiece(blocksWritten);
                     for (int j = 0; j < piecesPerBlock; j++) {
                         pendingBlocks.remove(blocksWritten * piecesPerBlock + j);
-                        
+
                     }
                     //Delete the pieces written to keep the size of pieceMap small      
                     blocksWritten++;
@@ -100,13 +100,12 @@ public class HDFSFileManager implements FileManager {
                         havePieces.clear(blocksWritten * piecesPerBlock + j);
                     }
                     currentBlockNumber--;
-                    try{
-                    System.out.write(toByteString(hashCal));
-                    System.out.println("");
-                    System.out.write(hashPiece);
-                    }
-                    catch(IOException ex) {
-                            logger.error("Exception occurred", ex);
+                    try {
+                        System.out.write(toByteString(hashCal));
+                        System.out.println("");
+                        System.out.write(hashPiece);
+                    } catch (IOException ex) {
+                        logger.error("Exception occurred", ex);
                     }
                     logger.error("WARN: Hash Mismatch!!");
                     //throw new HashMismatchException("The hash results do no match");
@@ -142,7 +141,8 @@ public class HDFSFileManager implements FileManager {
                 //Blocks to be discarded
                 int blockPos = (int) Math.ceil(piecePos / piecesPerBlock);
                 int ppInBlock = piecePos % piecesPerBlock;
-                readBlock = file.readBlock(blockPos);
+                //readBlock = file.readBlock(blockPos);
+                readBlock = file.read(blockPos*blockSize,blockSize);
                 //Debugging logs
                 logger.debug("{0}No. of pieces Per block is {1}", new Object[]{objectType, piecesPerBlock});
                 logger.debug("{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
@@ -184,7 +184,7 @@ public class HDFSFileManager implements FileManager {
         logger.info(objectType + "Piece number received " + piecePos);
         logger.info(objectType + "Number of pieces written " + nPiecesWritten);
         logger.info(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
-        
+
         if (ncpieces - nPiecesWritten == piecesPerBlock) {
 
             try {
@@ -220,7 +220,6 @@ public class HDFSFileManager implements FileManager {
     public String toString() {
         return file.toString();
     }
-
 
     private byte[] toByteString(byte[] hash) {
         StringBuilder sb = new StringBuilder();

@@ -97,7 +97,8 @@ public class HDFSHashManager implements FileManager {
             } else {
                 logger.debug(objectType + "Reading from index " + pieceSize * piecePos);
                 logger.debug(objectType + "Number of bytes to read " + pieceSize);
-                readPiece = file.readPiece(piecePos);
+                //readPiece = file.readPiece(piecePos);
+                readPiece = file.read(piecePos*pieceSize,pieceSize);
             }
 
             logger.info("Returning read piece");
