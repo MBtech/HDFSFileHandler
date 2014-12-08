@@ -6,7 +6,7 @@
 package mb.hdfs.core.storage;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
+import java.util.logging.Level;
 import mb.hdfs.aux.PathConstruction;
 import mb.hdfs.core.filemanager.FileManager;
 import org.apache.hadoop.conf.Configuration;
@@ -54,41 +54,73 @@ public class HDFSRWFile implements Storage {
 
     //TODO Change type of blockSize to long
     @Override
-    public byte[] readPiece(int piecePos) throws IOException, NoSuchAlgorithmException {
-        Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
-        FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
-        byte[] readPiece = new byte[pieceSize];
-        fdis.readFully(pieceSize * piecePos, readPiece, 0, pieceSize);
-        fdis.close();
-        return readPiece;
+    public byte[] readPiece(int piecePos){
+        FSDataInputStream fdis = null;
+        try {
+            Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
+            fdis = new FSDataInputStream(hdfs.open(filePath));
+            byte[] readPiece = new byte[pieceSize];
+            fdis.readFully(pieceSize * piecePos, readPiece, 0, pieceSize);
+            fdis.close();
+            return readPiece;
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
+        } 
+        return null; //handle nu,,
     }
 
     @Override
-    public byte[] readBlock(int blockPos) throws IOException {
-        Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
-        FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
-        byte[] readBlock = new byte[blockSize];
-        FileStatus fs = hdfs.getFileStatus(filePath);
-        logger.debug("Size of file" + fs.getLen());
-        //System.out.println(blockSize);
-        logger.debug("FileName " + fileName + " and FolderName " + folderName);
-        logger.debug("Reading from " + (blockSize * blockPos) + " to " + (blockSize * blockPos + blockSize));
-        fdis.readFully(blockSize * blockPos, readBlock, 0, blockSize);
-        fdis.close();
-        return readBlock;
+    public byte[] readBlock(int blockPos) {
+        FSDataInputStream fdis = null;
+        try {
+            Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
+            fdis = new FSDataInputStream(hdfs.open(filePath));
+            byte[] readBlock = new byte[blockSize];
+            FileStatus fs = hdfs.getFileStatus(filePath);
+            logger.debug("Size of file" + fs.getLen());
+            //System.out.println(blockSize);
+            logger.debug("FileName " + fileName + " and FolderName " + folderName);
+            logger.debug("Reading from " + (blockSize * blockPos) + " to " + (blockSize * blockPos + blockSize));
+            fdis.readFully(blockSize * blockPos, readBlock, 0, blockSize);
+            fdis.close();
+            return readBlock;
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
+        } 
+        return null; // handle null
     }
 
-    //TODO There is no need for the piecePos in this case. As the HDFS only provides the append
-    // operation
     // TODO change the blockSize type to long instead of int 
 
     @Override
-    public void writePiece(int piecePos, byte[] piece) throws IOException, NoSuchAlgorithmException {
-        fdos = hdfs.append(P);
-        fdos.write(piece);
-        fdos.flush();
-        fdos.close();
-        //Without closing this write handle. Read in HDFS is giving problems
+    public void writePiece(int piecePos, byte[] piece){
+        try {
+            fdos = hdfs.append(P);
+            fdos.write(piece);
+            fdos.flush();
+            fdos.close();
+            //Without closing this write handle. Read in HDFS is giving problems
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    // have to include the usage in HDFS file managers 
+    @Override
+    public byte[] read(long offset, int length) {
+        FSDataInputStream fdis = null;
+        try {
+            Path filePath = PathConstruction.CreateReadPath(hdfs, folderName, fileName);
+            fdis = new FSDataInputStream(hdfs.open(filePath));
+            byte[] readBuffer = new byte[length];
+            FileStatus fs = hdfs.getFileStatus(filePath);
+            logger.debug("Size of file" + fs.getLen());
+            fdis.readFully(offset, readBuffer, 0, length);
+            fdis.close();
+            return readBuffer;
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
+        } 
+        return null; //handle null
     }
 
 }

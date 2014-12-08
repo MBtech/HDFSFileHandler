@@ -15,7 +15,6 @@ import java.util.TreeMap;
 import mb.hdfs.aux.HashMismatchException;
 import mb.hdfs.core.storage.Storage;
 import mb.hdfs.core.piecetracker.PieceTracker;
-import org.apache.log4j.PropertyConfigurator;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,13 +76,8 @@ public class HDFSFileManager implements FileManager {
                     logger.info(objectType + "Match Successful: Data received is correct");
                     logger.info(objectType + "Writing contiguous pieces to hdfs");
                     for (int j = 0; j < piecesPerBlock; j++) {
-                        try {
-                            logger.info(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
-                            file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
-                            //pieceTracker.addPiece(blocksWritten * piecesPerBlock + j);
-                        } catch (IOException | NoSuchAlgorithmException ex) {
-                            logger.error("Exception occurred", ex);
-                        }
+                        logger.info(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
+                        file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                     }
                     
                     logger.info("Removing pending blocks");
@@ -172,7 +166,7 @@ public class HDFSFileManager implements FileManager {
                     throw new HashMismatchException("The hash results do no match");
                     //Handle the exception here as well. Or should we?
                 }
-            } catch (IOException | NoSuchAlgorithmException | HashMismatchException ex) {
+            } catch (NoSuchAlgorithmException | HashMismatchException ex) {
                 logger.error("Exception occurred", ex);
             }
         }

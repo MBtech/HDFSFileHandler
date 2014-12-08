@@ -6,14 +6,12 @@
 package mb.hdfs.core.filemanager;
 
 import java.io.IOException;
-import java.security.NoSuchAlgorithmException;
 import java.util.BitSet;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.logging.Level;
 import mb.hdfs.core.piecetracker.PieceTracker;
 import mb.hdfs.core.storage.Storage;
 import org.slf4j.Logger;
@@ -64,12 +62,9 @@ public class HDFSHashManager implements FileManager {
             Entry e = (Entry) entries.next();
             System.out.println(verified);
             if (verified.contains((int)e.getKey())) {
-                try {
-                    logger.info("writing piece number "+ e.getKey() + " to disk");
-                    file.writePiece((int) e.getKey(), (byte[]) e.getValue());
-                    entries.remove();
-                } catch (IOException | NoSuchAlgorithmException ex) {
-                }
+                logger.info("writing piece number "+ e.getKey() + " to disk");
+                file.writePiece((int) e.getKey(), (byte[]) e.getValue());
+                entries.remove();
             }
         }
         return pieceTracker.isComplete();
@@ -100,13 +95,9 @@ public class HDFSHashManager implements FileManager {
                 logger.info("The piece is in the pending queue" + objectType);
                 readPiece = piecesMap.get(piecePos);
             } else {
-                try {
-                    logger.debug(objectType + "Reading from index " + pieceSize * piecePos);
-                    logger.debug(objectType + "Number of bytes to read " + pieceSize);
-                    readPiece = file.readPiece(piecePos);
-                } catch (IOException | NoSuchAlgorithmException ex) {
-                    logger.error("Exception occurred", ex);
-                }
+                logger.debug(objectType + "Reading from index " + pieceSize * piecePos);
+                logger.debug(objectType + "Number of bytes to read " + pieceSize);
+                readPiece = file.readPiece(piecePos);
             }
 
             logger.info("Returning read piece");
@@ -135,12 +126,9 @@ public class HDFSHashManager implements FileManager {
             Entry e = (Entry) entries.next();
             System.out.println(verified);
             if (verified.contains((int)e.getKey())) {
-                try {
-                    System.out.println("writing piece number "+ e.getKey() + " to disk");
-                    file.writePiece((int) e.getKey(), (byte[]) e.getValue());
-                    entries.remove();
-                } catch (IOException | NoSuchAlgorithmException ex) {
-                }
+                System.out.println("writing piece number "+ e.getKey() + " to disk");
+                file.writePiece((int) e.getKey(), (byte[]) e.getValue());
+                entries.remove();
             }
         }
     }
