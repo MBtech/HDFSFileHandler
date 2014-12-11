@@ -8,7 +8,7 @@ package mb.hdfs.core.storage;
 import java.io.IOException;
 import java.util.logging.Level;
 import mb.hdfs.aux.PathConstruction;
-import mb.hdfs.core.filemanager.FileManager;
+import mb.hdfs.core.filemanager.FileMngr;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -34,18 +34,20 @@ public class HDFSRWFile implements Storage {
     private final FileSystem hdfs;
     private final Path P;
     private static final Logger logger = LoggerFactory.getLogger(HDFSRWFile.class);
-    public HDFSRWFile(String folderName, String fileName, int blockSize, int pieceSize, FileManager hashFileMngr)
+    public HDFSRWFile(String folderName, String fileName, long fileBlockSize, 
+            int blockSize, int pieceSize, FileMngr hashFileMngr)
             throws IOException {
         this.fileName = fileName;
         this.folderName = folderName;
         this.blockSize = blockSize;
         this.pieceSize = pieceSize;
         Configuration conf = new Configuration();
-        conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/core-site.xml");
-        conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/hdfs-site.xml");
+        conf.set("fs.defaultFS", "hdfs://localhost:9000");
+        //conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/core-site.xml");
+        //conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/hdfs-site.xml");
         hdfs = FileSystem.get(conf);
         P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
-        fdos = hdfs.create(P, true, blockSize, (short) 1, blockSize);
+        fdos = hdfs.create(P, true, blockSize, (short) 1, fileBlockSize);
         fdos.close();
         if (blockSize % pieceSize != 0) {
             throw new IllegalArgumentException("Illegal pieceSize: Size should be multiple of blockSize");

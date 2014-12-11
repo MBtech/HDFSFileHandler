@@ -14,7 +14,7 @@ import java.util.Set;
 
 import mb.hdfs.aux.HashMismatchException;
 import mb.hdfs.aux.UnitConversion;
-import mb.hdfs.core.filemanager.FileManager;
+import mb.hdfs.core.filemanager.FileMngr;
 import mb.hdfs.core.filemanager.HDFSFileManager;
 import mb.hdfs.core.filemanager.HDFSHashManager;
 import mb.hdfs.core.piecetracker.HDFSPieceTracker;
@@ -53,29 +53,36 @@ public class HDFSFileOperation {
      */
     public static void main(String[] args)
             throws NoSuchAlgorithmException, IOException, HashMismatchException, InterruptedException {
-        //Testing Operations of HDFSStorage
-        //NOTE: The write operations need to be close before read can be done.
-
+        //TODO: Is it protected in case of replication??
+        // IS THE REPLICATION HANDLED?
+        long hdfsFileBlockSize = UnitConversion.mbToBytes(1);
+        int dataPieceSize = UnitConversion.kbToBytes(512);
+        int hashPieceSize = 64;
+        int dataBlockSize = UnitConversion.mbToBytes(1);
+        int hashBlockSize = UnitConversion.mbToBytes(1);
+        int piecesPerBlock = (dataBlockSize/dataPieceSize);
+        int nDataPieces = 16;
+        int nHashPieces = nDataPieces/piecesPerBlock;
         Storage hashStorage = HDFSStorageFactory.getExistingFile("MyTestHashFolder",
-                "MyTestFile", UnitConversion.mbToBytes(1), 64, null);
-        PieceTracker hashPieceTracker = new HDFSPieceTracker(4);
-        FileManager hashFileManager = new HDFSHashManager(hashStorage,
-                hashPieceTracker, "MyTestHashFolder", "MyTestFile", UnitConversion.mbToBytes(1), 64);
+                "MyTestFile", hdfsFileBlockSize, hashBlockSize, hashPieceSize, null);
+        PieceTracker hashPieceTracker = new HDFSPieceTracker(nHashPieces);
+        FileMngr hashFileManager = new HDFSHashManager(hashStorage,
+                hashPieceTracker, "MyTestHashFolder", "MyTestFile", hashBlockSize, hashPieceSize);
 
         Storage s = HDFSStorageFactory.getExistingFile("MyTestFolder", "MyTestFile",
-                UnitConversion.mbToBytes(1), UnitConversion.kbToBytes(256), hashFileManager);
-        PieceTracker p = new HDFSPieceTracker(16);
-        FileManager dataFileManager = new HDFSFileManager(s, p, "MyTestFolder",
-                "MyTestFile", UnitConversion.mbToBytes(1), UnitConversion.kbToBytes(256), hashFileManager, hashPieceTracker);
+                hdfsFileBlockSize, dataBlockSize,dataPieceSize, hashFileManager);
+        PieceTracker p = new HDFSPieceTracker(nDataPieces);
+        FileMngr dataFileManager = new HDFSFileManager(s, p, "MyTestFolder",
+                "MyTestFile", dataBlockSize,dataPieceSize, hashFileManager, hashPieceTracker);
 
         List<byte[]> dataPiece = new ArrayList<>();
         List<byte[]> hashPiece = new ArrayList<>();
-        for (int j = 0; j < 4; j++) {
+        for (int j = 0; j < nHashPieces; j++) {
             md = MessageDigest.getInstance("SHA-256");
-            for (int i = 0; i < 4; i++) {
-                dataPiece.add(j * 4 + i, new DataGen().randDataGen(UnitConversion.kbToBytes(256)));
-
-                md.update(dataPiece.get(j * 4 + i));
+            for (int i = 0; i < piecesPerBlock; i++) {
+                dataPiece.add(j * piecesPerBlock + i, 
+                        new DataGen().randDataGen(dataPieceSize));
+                md.update(dataPiece.get(j * piecesPerBlock + i));
             }
             hashPiece.add(j, hash());
         }
@@ -85,6 +92,7 @@ public class HDFSFileOperation {
         //when hashes don't match and suppose only one block is missing in the middle of blocks
         // that have been received and verified. When next contiguous pieces are asked again
         // otherwise extra data might be downloaded and appended which would mess everthing up
+        /*
         hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
         dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
         for (Integer i : hashPieceSet) {
@@ -108,12 +116,13 @@ public class HDFSFileOperation {
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
-
-        while (!hashFileManager.isComplete() && !dataFileManager.isComplete()) {
+        dataFileManager.isComplete();
+            hashFileManager.isComplete();*/
+        while (!(hashFileManager.isComplete() && dataFileManager.isComplete())) {
             //System.out.println(hashPieceSet);
             //System.out.println(dataPieceSet);
-            hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
-            dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
+            hashPieceSet = hashPieceTracker.nextPiecesNeeded(2, hashPieceTracker.contiguousStart());
+            dataPieceSet = p.nextPiecesNeeded(piecesPerBlock, hashPieceTracker.contiguousStart());
             if (!hashPieceSet.isEmpty()) {
                 for (Integer i : hashPieceSet) {
                     hashFileManager.writePiece(i, hashPiece.get(i));

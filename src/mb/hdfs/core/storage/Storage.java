@@ -10,7 +10,7 @@ package mb.hdfs.core.storage;
  * @author Muhammad Bilal <mubil@kth.se>
  */
 public interface Storage {
-    
+    @Deprecated
     public byte[] readPiece(int piecePos);
     public byte[] read(long offset, int length); //Combine readPiece and readBlock into read
     //The problem here is that the length might be smaller than the block size

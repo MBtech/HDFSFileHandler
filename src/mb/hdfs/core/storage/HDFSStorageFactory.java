@@ -6,25 +6,25 @@
 package mb.hdfs.core.storage;
 
 import java.io.IOException;
-import mb.hdfs.core.filemanager.FileManager;
+import mb.hdfs.core.filemanager.FileMngr;
 
 /**
  *
  * @author Muhammad Bilal <mubil@kth.se>
  */
 public class HDFSStorageFactory {
-    public static Storage getExistingFile(String folderName, String fileName, int blockSize, int pieceSize, FileManager hashFileManager) throws IOException {
+    public static Storage getExistingFile(String folderName, String fileName, long fileBlockSize, int blockSize, int pieceSize, FileMngr hashFileManager) throws IOException {
         //File file = new File(pathname);
-        return new HDFSRWFile(folderName, fileName, blockSize, pieceSize, hashFileManager);
+        return new HDFSRWFile(folderName, fileName, fileBlockSize,blockSize, pieceSize, hashFileManager);
     }
     
     
-    public static Storage getEmptyFile(String folderName, String fileName, int blockSize, int pieceSize) throws IOException {
+    public static Storage getEmptyFile(String folderName, String fileName, long fileBlockSize, int blockSize, int pieceSize) throws IOException {
         /**File file = new File(pathname);
         if (!file.createNewFile()) {
             throw new IOException("Could not create file " + pathname);
         }
         **/
-        return new HDFSRWFile(folderName, fileName, blockSize, pieceSize,null);
+        return new HDFSRWFile(folderName, fileName, fileBlockSize,blockSize, pieceSize,null);
     }
 }

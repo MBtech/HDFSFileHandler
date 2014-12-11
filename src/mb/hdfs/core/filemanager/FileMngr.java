@@ -11,12 +11,12 @@ import java.util.Set;
  *
  * @author Muhammad Bilal <mubil@kth.se>
  */
-public interface FileManager {
+public interface FileMngr {
     public boolean isComplete();
     public Set<Integer> nextPiecesNeeded(int n, int startPos);
     public boolean hasPiece(int piecePos);
     public byte[] readPiece(int piecePos);
     public void writePiece(int piecePos, byte[] piece);
     public int contiguousStart();
-    public void verifiedPiece(int peicePos); //Extra function
+    public void verifiedPiece(int piecePos); //Extra function
 }

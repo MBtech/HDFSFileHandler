@@ -22,7 +22,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Muhammad Bilal <mubil@kth.se>
  */
-public class HDFSFileManager implements FileManager {
+public class HDFSFileManager implements FileMngr {
 
     private final Storage file;
     private final PieceTracker pieceTracker;
@@ -32,7 +32,7 @@ public class HDFSFileManager implements FileManager {
     private int currentBlockNumber;
     private final BitSet havePieces;
     private TreeMap<Integer, byte[]> piecesMap = new TreeMap<>();
-    private final FileManager hashFileManager;
+    private final FileMngr hashFileManager;
     private final PieceTracker hashPieceTracker;
     private int nPiecesWritten;
     private int blocksWritten;
@@ -41,7 +41,8 @@ public class HDFSFileManager implements FileManager {
     private String objectType;
     private static final Logger logger = LoggerFactory.getLogger(HDFSFileManager.class);
 
-    public HDFSFileManager(Storage file, PieceTracker pieces, String folderName, String fileName, int blockSize, int pieceSize, FileManager hashFileMngr, PieceTracker hashPieceTracker)
+    public HDFSFileManager(Storage file, PieceTracker pieces, String folderName, String fileName,
+            int blockSize, int pieceSize, FileMngr hashFileMngr, PieceTracker hashPieceTracker)
             throws IOException {
         this.file = file;
         this.pieceTracker = pieces;

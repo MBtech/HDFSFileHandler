@@ -21,7 +21,7 @@ import org.slf4j.LoggerFactory;
  *
  * @author Muhammad Bilal <mubil@kth.se>
  */
-public class HDFSHashManager implements FileManager {
+public class HDFSHashManager implements FileMngr {
 
     private final Storage file;
     private final PieceTracker pieceTracker;
@@ -37,7 +37,8 @@ public class HDFSHashManager implements FileManager {
     private static final Logger logger = LoggerFactory.getLogger(HDFSHashManager.class);
     private Set<Integer> verified = new HashSet<>();
 
-    public HDFSHashManager(Storage file, PieceTracker pieces, String folderName, String fileName, int blockSize, int pieceSize)
+    public HDFSHashManager(Storage file, PieceTracker pieces, String folderName,
+            String fileName, int blockSize, int pieceSize)
             throws IOException {
         this.file = file;
         this.pieceTracker = pieces;
