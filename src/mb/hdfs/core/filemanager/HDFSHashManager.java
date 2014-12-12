@@ -61,9 +61,9 @@ public class HDFSHashManager implements FileMngr {
         Iterator entries = piecesMap.entrySet().iterator();
         while (entries.hasNext()) {
             Entry e = (Entry) entries.next();
-            System.out.println(verified);
+            //System.out.println(verified);
             if (verified.contains((int)e.getKey())) {
-                logger.info("writing piece number "+ e.getKey() + " to disk");
+                logger.debug("writing piece number "+ e.getKey() + " to disk");
                 file.writePiece((int) e.getKey(), (byte[]) e.getValue());
                 entries.remove();
             }
@@ -93,7 +93,7 @@ public class HDFSHashManager implements FileMngr {
             logger.debug("{0}Block position of concern is {1}", new Object[]{objectType, blockPos});
 
             if (piecesMap.containsKey(piecePos)) {
-                logger.info("The piece is in the pending queue" + objectType);
+                logger.debug("The piece is in the pending queue" + objectType);
                 readPiece = piecesMap.get(piecePos);
             } else {
                 logger.debug(objectType + "Reading from index " + pieceSize * piecePos);
@@ -102,7 +102,7 @@ public class HDFSHashManager implements FileMngr {
                 readPiece = file.read(piecePos*pieceSize,pieceSize);
             }
 
-            logger.info("Returning read piece");
+            logger.debug("Returning read piece");
             return readPiece;
 
     }
@@ -118,17 +118,17 @@ public class HDFSHashManager implements FileMngr {
             nPiecesWritten = piecePos;
         }
         nPiecesWritten = currentBlockNumber * piecesPerBlock;
-        logger.info(objectType + "Piece number of received data " + piecePos);
-        logger.info(objectType + "Number of pieces written " + nPiecesWritten);
-        logger.info(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
+        logger.debug(objectType + "Piece number of received data " + piecePos);
+        logger.debug(objectType + "Number of pieces written " + nPiecesWritten);
+        logger.debug(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
 
         //Check for the pending blocks that are also verified and write them to HDFS
         Iterator entries = piecesMap.entrySet().iterator();
         while (entries.hasNext()) {
             Entry e = (Entry) entries.next();
-            System.out.println(verified);
+            //System.out.println(verified);
             if (verified.contains((int)e.getKey())) {
-                System.out.println("writing piece number "+ e.getKey() + " to disk");
+                logger.debug("writing piece number "+ e.getKey() + " to disk");
                 file.writePiece((int) e.getKey(), (byte[]) e.getValue());
                 entries.remove();
             }

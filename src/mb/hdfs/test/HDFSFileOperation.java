@@ -42,7 +42,7 @@ public class HDFSFileOperation {
         for (int i = 0; i < hashPiece.length; i++) {
             sb.append(Integer.toString((hashPiece[i] & 0xff) + 0x100, 16).substring(1));
         }
-        System.out.println(sb.toString());
+        //System.out.println(sb.toString());
         return sb.toString().getBytes();
     }
 
@@ -50,18 +50,21 @@ public class HDFSFileOperation {
      * @param args the command line arguments
      * @throws java.security.NoSuchAlgorithmException
      * @throws java.io.IOException
+     * @throws mb.hdfs.aux.HashMismatchException
+     * @throws java.lang.InterruptedException
      */
     public static void main(String[] args)
             throws NoSuchAlgorithmException, IOException, HashMismatchException, InterruptedException {
         //TODO: Is it protected in case of replication??
         // IS THE REPLICATION HANDLED?
+        int nDataPieces = Integer.parseInt(args[0]);
+        int piecesPerBlock = Integer.parseInt(args[1]);
         long hdfsFileBlockSize = UnitConversion.mbToBytes(1);
-        int dataPieceSize = UnitConversion.kbToBytes(512);
+        int dataPieceSize = UnitConversion.mbToBytes(1)/piecesPerBlock;
         int hashPieceSize = 64;
         int dataBlockSize = UnitConversion.mbToBytes(1);
         int hashBlockSize = UnitConversion.mbToBytes(1);
-        int piecesPerBlock = (dataBlockSize/dataPieceSize);
-        int nDataPieces = 16;
+        
         int nHashPieces = nDataPieces/piecesPerBlock;
         Storage hashStorage = HDFSStorageFactory.getExistingFile("MyTestHashFolder",
                 "MyTestFile", hdfsFileBlockSize, hashBlockSize, hashPieceSize, null);
@@ -98,7 +101,7 @@ public class HDFSFileOperation {
         for (Integer i : hashPieceSet) {
             hashFileManager.writePiece(i, hashPiece.get(i));
         }
-        logger.info("Hashes written. Written data pieces now");
+        logger.debug("Hashes written. Written data pieces now");
 
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
@@ -112,12 +115,13 @@ public class HDFSFileOperation {
         for (Integer i : hashPieceSet) {
             hashFileManager.writePiece(i, hashPiece.get(0));
         }
-        logger.info("Hashes written. Written data pieces now");
+        logger.debug("Hashes written. Written data pieces now");
         dataPieceSet.stream().forEach((i) -> {
             dataFileManager.writePiece(i, dataPiece.get(i));
         });
         dataFileManager.isComplete();
             hashFileManager.isComplete();*/
+        long startTime = System.currentTimeMillis();
         while (!(hashFileManager.isComplete() && dataFileManager.isComplete())) {
             //System.out.println(hashPieceSet);
             //System.out.println(dataPieceSet);
@@ -128,38 +132,26 @@ public class HDFSFileOperation {
                     hashFileManager.writePiece(i, hashPiece.get(i));
                 }
             }
-            logger.info("Hashes written. Written data pieces now: In loop");
+            logger.debug("Hashes written. Written data pieces now: In loop");
             if (!dataPieceSet.isEmpty()) {
                 dataPieceSet.stream().forEach((i) -> {
                     dataFileManager.writePiece(i, dataPiece.get(i));
                 });
             }
-            Thread.sleep(1000);
+            //Thread.sleep(1000);
             dataFileManager.isComplete();
             hashFileManager.isComplete();
         }
-        
-        logger.info("Calling close function");
+        long stopTime = System.currentTimeMillis();
+        long elapsedTime = stopTime - startTime;
+        System.out.println("Runtime of the program: " + elapsedTime);
+        /**
+        logger.debug("Calling close function");
 
-        logger.info("Start Reading");
+        logger.debug("Start Reading");
         dataFileManager.readPiece(4);
-        logger.info("Reading done");
-        /*
-         //Sending out of order packets
-         Set n = new LinkedHashSet();
-         n.add(12);
-         n.add(14);
-         n.add(15);
-         n.add(13);
-         for (Object i : n) {
-         dataFileManager.writePiece((int) i, new DataGen().randDataGen(UnitConversion.kbToBytes(256)));
-
-         }
-
-         dataFileManager.readPiece(14);
-         System.out.println("Reading done");
-         System.out.println("Closing the file");
-         */
+        logger.debug("Reading done");
+        * */
     }
 
 }

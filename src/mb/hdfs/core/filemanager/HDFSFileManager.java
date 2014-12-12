@@ -63,25 +63,25 @@ public class HDFSFileManager implements FileMngr {
 
     @Override
     public boolean isComplete() {
-        System.out.println("Is complete function called!");
+        //System.out.println("Is complete function called!");
         byte[] hashPiece;
         int hashBlkAvail = hashFileManager.contiguousStart() - blocksWritten;
         //Iterate over all the pending blocks whose hashes we have
         for (int i = 0; i < hashBlkAvail; i++) {
             byte[] hashCal;
             if (pendingBlockHash.containsKey(blocksWritten)) {
-                logger.info("Asking for hash piece number " + blocksWritten);
+                logger.debug("Asking for hash piece number " + blocksWritten);
                 hashPiece = hashFileManager.readPiece(blocksWritten);
                 hashCal = pendingBlockHash.get(blocksWritten);
                 if (Arrays.equals(toByteString(hashCal), hashPiece)) {
-                    logger.info(objectType + "Match Successful: Data received is correct");
-                    logger.info(objectType + "Writing contiguous pieces to hdfs");
+                    logger.debug(objectType + "Match Successful: Data received is correct");
+                    logger.debug(objectType + "Writing contiguous pieces to hdfs");
                     for (int j = 0; j < piecesPerBlock; j++) {
-                        logger.info(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
+                        logger.debug(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
                         file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                     }
 
-                    logger.info("Removing pending blocks");
+                    logger.debug("Removing pending blocks");
                     pendingBlockHash.remove(blocksWritten);
                     hashFileManager.verifiedPiece(blocksWritten);
                     for (int j = 0; j < piecesPerBlock; j++) {
@@ -159,7 +159,7 @@ public class HDFSFileManager implements FileMngr {
                 hashByte = hashFileManager.readPiece(blockPos);
                 //Compare hashes
                 if (Arrays.equals(toByteString(readHashByte), hashByte)) {
-                    logger.info("Match Successful");
+                    logger.debug("Match Successful");
                     return readPiece;
                 } else {
                     logger.error("The hash of the data block is: ", hashByte);
@@ -182,14 +182,14 @@ public class HDFSFileManager implements FileMngr {
         havePieces.set(piecePos);
         int ncpieces = havePieces.nextClearBit(0);
         nPiecesWritten = currentBlockNumber * piecesPerBlock;
-        logger.info(objectType + "Piece number received " + piecePos);
-        logger.info(objectType + "Number of pieces written " + nPiecesWritten);
-        logger.info(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
+        logger.debug(objectType + "Piece number received " + piecePos);
+        logger.debug(objectType + "Number of pieces written " + nPiecesWritten);
+        logger.debug(objectType + "Number of contiguous pieces " + (ncpieces - nPiecesWritten));
 
         if (ncpieces - nPiecesWritten == piecesPerBlock) {
 
             try {
-                logger.info(objectType + "Calculating hashes for contiguous pieces");
+                logger.debug(objectType + "Calculating hashes for contiguous pieces");
                 MessageDigest md = MessageDigest.getInstance("SHA-256");
                 for (int i = nPiecesWritten; i < ncpieces; i++) {
                     //System.out.println("Writing piece number " + i);
