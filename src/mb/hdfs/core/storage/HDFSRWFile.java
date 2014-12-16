@@ -42,12 +42,13 @@ public class HDFSRWFile implements Storage {
         this.blockSize = blockSize;
         this.pieceSize = pieceSize;
         Configuration conf = new Configuration();
-        conf.set("fs.defaultFS", "hdfs://localhost:9000");
+        conf.set("fs.defaultFS", "hdfs://172.31.16.234:9000");
+        //conf.set("fs.default.name", "hdfs://172.31.16.234:9000"); Deprecated
         //conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/core-site.xml");
         //conf.addResource("/home/mb/NetBeansProjects/HDFSFileHandler/hdfs-site.xml");
         hdfs = FileSystem.get(conf);
         P = PathConstruction.CreatePathAndFile(hdfs, folderName, fileName, true);
-        fdos = hdfs.create(P, true, blockSize, (short) 1, fileBlockSize);
+        fdos = hdfs.create(P, true, blockSize, (short) 2, fileBlockSize);
         fdos.close();
         if (blockSize % pieceSize != 0) {
             throw new IllegalArgumentException("Illegal pieceSize: Size should be multiple of blockSize");
@@ -83,6 +84,19 @@ public class HDFSRWFile implements Storage {
             java.util.logging.Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
         }
     }
+    @Override
+    public void write(long offset, byte[] piece){
+        try {
+            fdos = hdfs.append(P);
+            fdos.write(piece);
+            fdos.flush();
+            fdos.close();
+            //Without closing this write handle. Read in HDFS is giving problems
+        } catch (IOException ex) {
+            java.util.logging.Logger.getLogger(HDFSRWFile.class.getName()).log(Level.SEVERE, null, ex);
+        }
+    }
+    
     // have to include the usage in HDFS file managers 
     @Override
     public byte[] read(long offset, int length) {

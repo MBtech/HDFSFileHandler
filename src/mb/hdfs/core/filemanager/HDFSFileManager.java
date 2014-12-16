@@ -69,6 +69,7 @@ public class HDFSFileManager implements FileMngr {
         //Iterate over all the pending blocks whose hashes we have
         for (int i = 0; i < hashBlkAvail; i++) {
             byte[] hashCal;
+            byte[] wPiece = new byte[blockSize];
             if (pendingBlockHash.containsKey(blocksWritten)) {
                 logger.debug("Asking for hash piece number " + blocksWritten);
                 hashPiece = hashFileManager.readPiece(blocksWritten);
@@ -77,10 +78,13 @@ public class HDFSFileManager implements FileMngr {
                     logger.debug(objectType + "Match Successful: Data received is correct");
                     logger.debug(objectType + "Writing contiguous pieces to hdfs");
                     for (int j = 0; j < piecesPerBlock; j++) {
+                        int index = (blocksWritten * piecesPerBlock + j);
                         logger.debug(objectType + "Writing piece number " + (blocksWritten * piecesPerBlock + j));
-                        file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
+                        System.arraycopy(pendingBlocks.get(index), 0, wPiece, pieceSize*j, pieceSize);
+                        //file.writePiece(index, pendingBlocks.get(index));
                     }
-
+                    file.write(blocksWritten*piecesPerBlock, wPiece);
+                    //file.writePiece((blocksWritten * piecesPerBlock + j), pendingBlocks.get((blocksWritten * piecesPerBlock + j)));
                     logger.debug("Removing pending blocks");
                     pendingBlockHash.remove(blocksWritten);
                     hashFileManager.verifiedPiece(blocksWritten);

@@ -14,7 +14,9 @@ public interface Storage {
     public byte[] readPiece(int piecePos);
     public byte[] read(long offset, int length); //Combine readPiece and readBlock into read
     //The problem here is that the length might be smaller than the block size
+    @Deprecated
     public void writePiece(int piecePos, byte[] piece);
+    public void write(long offset, byte[] piece);
     
     
 }

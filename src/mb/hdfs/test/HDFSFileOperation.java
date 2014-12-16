@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.Set;
 
 import mb.hdfs.aux.HashMismatchException;
+import mb.hdfs.aux.PathConstruction;
 import mb.hdfs.aux.UnitConversion;
 import mb.hdfs.core.filemanager.FileMngr;
 import mb.hdfs.core.filemanager.HDFSFileManager;
@@ -23,6 +24,10 @@ import mb.hdfs.datagen.DataGen;
 
 import mb.hdfs.core.storage.HDFSStorageFactory;
 import mb.hdfs.core.storage.Storage;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +50,6 @@ public class HDFSFileOperation {
         //System.out.println(sb.toString());
         return sb.toString().getBytes();
     }
-
     /**
      * @param args the command line arguments
      * @throws java.security.NoSuchAlgorithmException
@@ -57,12 +61,16 @@ public class HDFSFileOperation {
             throws NoSuchAlgorithmException, IOException, HashMismatchException, InterruptedException {
         //TODO: Is it protected in case of replication??
         // IS THE REPLICATION HANDLED?
-        int nDataPieces = Integer.parseInt(args[0]);
-        int piecesPerBlock = Integer.parseInt(args[1]);
+        int fileSize = UnitConversion.mbToBytes(Integer.parseInt(args[0]));
+        int dataBlockSize = UnitConversion.kbToBytes(Integer.parseInt(args[1]));
+        int dataPieceSize = UnitConversion.kbToBytes(1);
+        int nDataPieces = fileSize/dataPieceSize;
         long hdfsFileBlockSize = UnitConversion.mbToBytes(1);
-        int dataPieceSize = UnitConversion.mbToBytes(1)/piecesPerBlock;
+        
+       
+        int piecesPerBlock = dataBlockSize/dataPieceSize;
         int hashPieceSize = 64;
-        int dataBlockSize = UnitConversion.mbToBytes(1);
+        System.out.println("Pieces per block: " + piecesPerBlock);
         int hashBlockSize = UnitConversion.mbToBytes(1);
         
         int nHashPieces = nDataPieces/piecesPerBlock;
@@ -77,9 +85,9 @@ public class HDFSFileOperation {
         PieceTracker p = new HDFSPieceTracker(nDataPieces);
         FileMngr dataFileManager = new HDFSFileManager(s, p, "MyTestFolder",
                 "MyTestFile", dataBlockSize,dataPieceSize, hashFileManager, hashPieceTracker);
-
+        
         List<byte[]> dataPiece = new ArrayList<>();
-        List<byte[]> hashPiece = new ArrayList<>();
+        List<byte[]> hashPiece = new ArrayList<>();/**
         for (int j = 0; j < nHashPieces; j++) {
             md = MessageDigest.getInstance("SHA-256");
             for (int i = 0; i < piecesPerBlock; i++) {
@@ -88,39 +96,28 @@ public class HDFSFileOperation {
                 md.update(dataPiece.get(j * piecesPerBlock + i));
             }
             hashPiece.add(j, hash());
+        }**/
+        for (int j = 0; j < 1; j++) {
+            md = MessageDigest.getInstance("SHA-256");
+            for (int i = 0; i < piecesPerBlock; i++) {
+                dataPiece.add(j * piecesPerBlock + i, 
+                        new DataGen().randDataGen(dataPieceSize));
+                md.update(dataPiece.get(j * piecesPerBlock + i));
+            }
+            hashPiece.add(j, hash());
         }
+        /**
+         Configuration conf = new Configuration();
+        conf.set("fs.defaultFS", "hdfs://localhost:9000");
+        FileSystem hdfs = FileSystem.get(conf);
+        Path filePath = PathConstruction.CreateReadPath(hdfs, "SourceFolder", "DataFile");
+        FSDataInputStream fdis = new FSDataInputStream(hdfs.open(filePath));
+        byte[] readPiece = new byte[dataPieceSize];
+        fdis.readFully(dataPieceSize * piecePos, readPiece, 0, dataPieceSize);
+        //fdis.close();
+        * */
         Set<Integer> hashPieceSet;
         Set<Integer> dataPieceSet;
-        //If pieces requested at any time are not equal to block size. The problem will arise
-        //when hashes don't match and suppose only one block is missing in the middle of blocks
-        // that have been received and verified. When next contiguous pieces are asked again
-        // otherwise extra data might be downloaded and appended which would mess everthing up
-        /*
-        hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
-        dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
-        for (Integer i : hashPieceSet) {
-            hashFileManager.writePiece(i, hashPiece.get(i));
-        }
-        logger.debug("Hashes written. Written data pieces now");
-
-        dataPieceSet.stream().forEach((i) -> {
-            dataFileManager.writePiece(i, dataPiece.get(i));
-        });
-
-        dataFileManager.isComplete();
-        hashFileManager.isComplete();
-
-        hashPieceSet = hashPieceTracker.nextPiecesNeeded(1, hashPieceTracker.contiguousStart());
-        dataPieceSet = p.nextPiecesNeeded(4, hashPieceTracker.contiguousStart());
-        for (Integer i : hashPieceSet) {
-            hashFileManager.writePiece(i, hashPiece.get(0));
-        }
-        logger.debug("Hashes written. Written data pieces now");
-        dataPieceSet.stream().forEach((i) -> {
-            dataFileManager.writePiece(i, dataPiece.get(i));
-        });
-        dataFileManager.isComplete();
-            hashFileManager.isComplete();*/
         long startTime = System.currentTimeMillis();
         while (!(hashFileManager.isComplete() && dataFileManager.isComplete())) {
             //System.out.println(hashPieceSet);
@@ -129,14 +126,16 @@ public class HDFSFileOperation {
             dataPieceSet = p.nextPiecesNeeded(piecesPerBlock, hashPieceTracker.contiguousStart());
             if (!hashPieceSet.isEmpty()) {
                 for (Integer i : hashPieceSet) {
-                    hashFileManager.writePiece(i, hashPiece.get(i));
+                    hashFileManager.writePiece(i, hashPiece.get(0));
                 }
             }
             logger.debug("Hashes written. Written data pieces now: In loop");
+            int j = 0;
             if (!dataPieceSet.isEmpty()) {
-                dataPieceSet.stream().forEach((i) -> {
-                    dataFileManager.writePiece(i, dataPiece.get(i));
-                });
+                for(Integer i:dataPieceSet) {
+                    dataFileManager.writePiece(i, dataPiece.get(j));
+                    j++;
+                };
             }
             //Thread.sleep(1000);
             dataFileManager.isComplete();
@@ -145,13 +144,13 @@ public class HDFSFileOperation {
         long stopTime = System.currentTimeMillis();
         long elapsedTime = stopTime - startTime;
         System.out.println("Runtime of the program: " + elapsedTime);
-        /**
+        
         logger.debug("Calling close function");
 
-        logger.debug("Start Reading");
+        logger.info("Start Reading");
         dataFileManager.readPiece(4);
         logger.debug("Reading done");
-        * */
+        
     }
 
 }
